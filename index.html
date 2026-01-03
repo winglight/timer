@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>呼吸练习 10 分钟</title>
+<style>
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 16px; }
+.panel { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #0f4c81; }
+.time-left { font-size: 32px; font-weight: 700; color: #0f4c81; }
+.controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.controls label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.controls input[type="range"] { width: 180px; accent-color: #0f4c81; }
+.btn { background: #0f4c81; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+.wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.circle { position: relative; width: 240px; height: 240px; border-radius: 50%; background: #a7d8f0; display: flex; align-items: center; justify-content: center; transform: scale(0.7); transition: transform 4s ease-in-out; will-change: transform; box-shadow: 0 8px 24px rgba(167, 216, 240, 0.6); }
+.circle::before { content: ""; position: absolute; inset: -28px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle at center, rgba(167,216,240,0.65) 30%, rgba(167,216,240,0.35) 65%, rgba(255,255,255,1) 100%); filter: blur(0.6px); }
+.circle.vibrating::before { animation: ringPulse 2s ease-in-out infinite; }
+@keyframes ringPulse {
+  0%   { transform: scale(1); opacity: 0.95; }
+  50%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.95; }
+}
+.label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="controls">
+    <label>吸时长
+      <input id="inhaleRange" type="range" min="1" max="20" step="1" value="4">
+      <span id="inhaleVal">4</span>s
+    </label>
+    <label>呼时长
+      <input id="exhaleRange" type="range" min="1" max="30" step="1" value="6">
+      <span id="exhaleVal">6</span>s
+    </label>
+    <label>暂停时长
+      <input id="pauseRange" type="range" min="0" max="15" step="1" value="0">
+      <span id="pauseVal">0</span>s
+    </label>
+    <button id="toggleBtn" class="btn">开始</button>
+  </div>
+</div>
+<div class="time-left">剩余时间：<span id="remaining">10:00</span></div>
+<div class="wrap">
+  <div id="circle" class="circle">
+    <div id="label" class="label"></div>
+  </div>
+</div>
+<script>
+const circle = document.getElementById('circle');
+const label = document.getElementById('label');
+const inhaleRange = document.getElementById('inhaleRange');
+const exhaleRange = document.getElementById('exhaleRange');
+const pauseRange = document.getElementById('pauseRange');
+const inhaleVal = document.getElementById('inhaleVal');
+const exhaleVal = document.getElementById('exhaleVal');
+const pauseVal = document.getElementById('pauseVal');
+const remainingEl = document.getElementById('remaining');
+const toggleBtn = document.getElementById('toggleBtn');
+
+function formatTime(s){ const m = Math.floor(s/60); const ss = s%60; return String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0'); }
+function getInhale(){ return parseInt(inhaleRange.value,10); }
+function getExhale(){ return parseInt(exhaleRange.value,10); }
+function getPause(){ return parseInt(pauseRange.value,10); }
+
+const SETTINGS_KEY = 'breath_settings';
+function saveSettings(){
+  const data = { inhale: getInhale(), exhale: getExhale(), pause: getPause() };
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch(e){}
+}
+function loadSettings(){
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw){
+      const data = JSON.parse(raw);
+      if (typeof data.inhale === 'number') inhaleRange.value = String(data.inhale);
+      if (typeof data.exhale === 'number') exhaleRange.value = String(data.exhale);
+      if (typeof data.pause === 'number') pauseRange.value = String(data.pause);
+    }
+  } catch(e){}
+  inhaleVal.textContent = inhaleRange.value;
+  exhaleVal.textContent = exhaleRange.value;
+  pauseVal.textContent = pauseRange.value;
+}
+
+let phase = 'inhale';
+let secondsLeft = 0;
+let sessionLeft = 600;
+let running = false;
+let timer = null;
+let nextAfterPause = null;
+let audioCtx = null;
+
+function ensureAudio(){
+  if (!audioCtx){
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+  }
+}
+
+function playBeep(durationSec){
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 600;
+  const t = audioCtx.currentTime;
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.06, t + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + durationSec);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + durationSec + 0.05);
+}
+
+function playPhaseTone(name){
+  const d = name === 'pause' ? 0.4 : 1.2;
+  playBeep(d);
+}
+
+function startPhase(name){
+  phase = name;
+  if (name === 'pause'){
+    secondsLeft = getPause();
+    circle.classList.remove('vibrating');
+    circle.style.transitionDuration = '0s';
+    label.textContent = '停' + secondsLeft;
+    if (running) playPhaseTone('pause');
+    return;
+  }
+  secondsLeft = name === 'inhale' ? getInhale() : getExhale();
+  circle.classList.add('vibrating');
+  circle.style.transitionDuration = secondsLeft + 's';
+  circle.style.transform = name === 'inhale' ? 'scale(1)' : 'scale(0.7)';
+  label.textContent = (name === 'inhale' ? '吸' : '呼') + secondsLeft;
+  if (running) playPhaseTone(name);
+}
+
+function tick(){
+  sessionLeft -= 1;
+  if (sessionLeft <= 0){
+    finish();
+    return;
+  }
+  remainingEl.textContent = formatTime(sessionLeft);
+  secondsLeft -= 1;
+  if (secondsLeft > 0){
+    label.textContent = phase === 'pause' ? ('停' + secondsLeft) : ((phase === 'inhale' ? '吸' : '呼') + secondsLeft);
+    return;
+  }
+  if (phase === 'pause'){
+    startPhase(nextAfterPause || 'inhale');
+    nextAfterPause = null;
+    return;
+  }
+  const p = getPause();
+  if (p > 0){
+    nextAfterPause = (phase === 'inhale') ? 'exhale' : 'inhale';
+    startPhase('pause');
+    return;
+  }
+  startPhase((phase === 'inhale') ? 'exhale' : 'inhale');
+}
+
+function start(){
+  if (sessionLeft <= 0){
+    sessionLeft = 600;
+    remainingEl.textContent = formatTime(sessionLeft);
+  }
+  if (secondsLeft <= 0){
+    startPhase(phase);
+  }
+  running = true;
+  toggleBtn.textContent = '停止';
+  ensureAudio();
+  timer = setInterval(tick, 1000);
+}
+
+function stop(){
+  running = false;
+  toggleBtn.textContent = '开始';
+  if (timer){ clearInterval(timer); timer = null; }
+  circle.classList.remove('vibrating');
+}
+
+function finish(){
+  stop();
+  label.textContent = '完成';
+  circle.style.transitionDuration = '0.5s';
+  circle.style.transform = 'scale(1)';
+  remainingEl.textContent = '00:00';
+  circle.classList.remove('vibrating');
+}
+
+loadSettings();
+remainingEl.textContent = formatTime(sessionLeft);
+label.textContent = '吸' + inhaleRange.value;
+
+inhaleRange.addEventListener('input', () => {
+  inhaleVal.textContent = inhaleRange.value;
+  saveSettings();
+  if (!running && sessionLeft > 0){
+    if (phase === 'inhale') label.textContent = '吸' + inhaleRange.value;
+  }
+});
+
+exhaleRange.addEventListener('input', () => {
+  exhaleVal.textContent = exhaleRange.value;
+  saveSettings();
+  if (!running && sessionLeft > 0){
+    if (phase === 'exhale') label.textContent = '呼' + exhaleRange.value;
+  }
+});
+
+pauseRange.addEventListener('input', () => {
+  pauseVal.textContent = pauseRange.value;
+  saveSettings();
+  if (!running && sessionLeft > 0){
+    if (phase === 'pause') label.textContent = '停' + pauseRange.value;
+  }
+});
+
+toggleBtn.addEventListener('click', () => {
+  if (!running){ start(); } else { stop(); }
+});
+</script>
+</body>
+</html>
