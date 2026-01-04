@@ -15,8 +15,12 @@ body { display: flex; flex-direction: column; align-items: center; justify-conte
 .btn { background: #0f4c81; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 16px; cursor: pointer; }
 .wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .circle { position: relative; width: 240px; height: 240px; border-radius: 50%; background: #a7d8f0; display: flex; align-items: center; justify-content: center; transform: scale(0.7); transition: transform 4s ease-in-out; will-change: transform; box-shadow: 0 8px 24px rgba(167, 216, 240, 0.6); }
-.circle::before { content: ""; position: absolute; inset: -28px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle at center, rgba(167,216,240,0.65) 30%, rgba(167,216,240,0.35) 65%, rgba(255,255,255,1) 100%); filter: blur(0.6px); }
-.circle.vibrating::before { animation: ringPulse 2s ease-in-out infinite; }
+.circle::before { content: ""; position: absolute; inset: -28px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle at center, rgba(167,216,240,0.65) 30%, rgba(167,216,240,0.35) 65%, rgba(255,255,255,1) 100%); filter: blur(0.6px); display: none; }
+.wave-svg { position: absolute; top: -56px; left: -56px; width: 352px; height: 352px; pointer-events: none; z-index: -1; filter: blur(0.6px); overflow: visible; }
+.circle.vibrating .wave-svg { animation: ringPulse 2s ease-in-out infinite; }
+.github-link { position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; opacity: 0.6; transition: opacity 0.3s; z-index: 1000; color: #0f4c81; }
+.github-link:hover { opacity: 1; }
+.github-link svg { width: 100%; height: 100%; fill: currentColor; }
 @keyframes ringPulse {
   0%   { transform: scale(1); opacity: 0.95; }
   50%  { transform: scale(1.08); opacity: 1; }
@@ -46,6 +50,9 @@ body { display: flex; flex-direction: column; align-items: center; justify-conte
 <div class="time-left">剩余时间：<span id="remaining">10:00</span></div>
 <div class="wrap">
   <div id="circle" class="circle">
+    <svg class="wave-svg" viewBox="0 0 296 296">
+      <path id="wavePath" fill="#8dc8ea" d="" />
+    </svg>
     <div id="label" class="label"></div>
   </div>
 </div>
@@ -222,6 +229,66 @@ pauseRange.addEventListener('input', () => {
     if (phase === 'pause') label.textContent = '停' + pauseRange.value;
   }
 });
+
+function generateWaves() {
+   const path = document.getElementById('wavePath');
+   const size = 352;
+   const cx = size / 2;
+   const cy = size / 2;
+   const rBase = size / 2;
+    const ringWidth = 56; 
+    const maxWaveHeight = 24; // 限制波浪幅度，保留更多实心部分
+    
+    // Generate points
+    const points = [];
+    const segments = 24; // 稍微增加段数，使波浪更密集一些
+    for (let i = 0; i < segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      
+      // 使用正弦波产生规律起伏
+      const sineVal = Math.sin(angle * 6); // 6个波峰
+      const normalizedSine = (sineVal + 1) / 2; // 0 to 1
+      
+      // 让波浪在最外层波动
+      // r 变化范围：rBase - maxWaveHeight 到 rBase
+      const offset = normalizedSine * maxWaveHeight; 
+      
+      const r = rBase - offset;
+      
+      points.push({
+        x: cx + Math.cos(angle) * r,
+        y: cy + Math.sin(angle) * r
+      });
+    }
+   
+   // Close the loop
+   // To make it smooth, we use Quadratic Bezier curves between midpoints of segments
+   let d = "";
+   
+   // Find midpoints
+   const midPoints = [];
+   for (let i = 0; i < points.length; i++) {
+     const p1 = points[i];
+     const p2 = points[(i + 1) % points.length];
+     midPoints.push({
+       x: (p1.x + p2.x) / 2,
+       y: (p1.y + p2.y) / 2
+     });
+   }
+   
+   // Start from first midpoint
+   d += `M ${midPoints[0].x} ${midPoints[0].y}`;
+   
+   // Loop through points and draw Quad Bezier to next midpoint
+   for (let i = 0; i < points.length; i++) {
+     const p = points[(i + 1) % points.length]; // The control point (the actual point on ring)
+     const nextMid = midPoints[(i + 1) % midPoints.length]; // The destination
+     
+     d += ` Q ${p.x} ${p.y}, ${nextMid.x} ${nextMid.y}`;
+   }
+   
+   path.setAttribute('d', d);
+ }
 
 toggleBtn.addEventListener('click', () => {
   if (!running){ start(); } else { stop(); }
