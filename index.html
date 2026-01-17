@@ -2,6 +2,15 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-B82Q8E53ZL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MEASUREMENT_ID');
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>呼吸练习 10 分钟</title>
 <style>
@@ -184,6 +193,15 @@ function start(){
   toggleBtn.textContent = '停止';
   ensureAudio();
   timer = setInterval(tick, 1000);
+  
+  // Analytics
+  if (typeof gtag === 'function') {
+    gtag('event', 'start_practice', {
+      inhale: getInhale(),
+      exhale: getExhale(),
+      pause: getPause()
+    });
+  }
 }
 
 function stop(){
@@ -191,6 +209,13 @@ function stop(){
   toggleBtn.textContent = '开始';
   if (timer){ clearInterval(timer); timer = null; }
   circle.classList.remove('vibrating');
+  
+  // Analytics
+  if (typeof gtag === 'function') {
+    gtag('event', 'stop_practice', {
+      remaining_seconds: sessionLeft
+    });
+  }
 }
 
 function finish(){
@@ -200,6 +225,11 @@ function finish(){
   circle.style.transform = 'scale(1)';
   remainingEl.textContent = '00:00';
   circle.classList.remove('vibrating');
+
+  // Analytics
+  if (typeof gtag === 'function') {
+    gtag('event', 'complete_practice');
+  }
 }
 
 loadSettings();
@@ -293,6 +323,21 @@ function generateWaves() {
 toggleBtn.addEventListener('click', () => {
   if (!running){ start(); } else { stop(); }
 });
+
+// Analytics: Settings changes
+const trackSettingChange = (setting, value) => {
+  if (typeof gtag === 'function') {
+    gtag('event', 'update_setting', {
+      setting_name: setting,
+      value: value
+    });
+  }
+};
+
+inhaleRange.addEventListener('change', () => trackSettingChange('inhale', getInhale()));
+exhaleRange.addEventListener('change', () => trackSettingChange('exhale', getExhale()));
+pauseRange.addEventListener('change', () => trackSettingChange('pause', getPause()));
+
 </script>
 </body>
 </html>
