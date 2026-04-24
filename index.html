@@ -13,59 +13,140 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>呼吸练习 10 分钟</title>
+<link rel="stylesheet" href="./r2-config.css">
 <style>
-html, body { height: 100%; margin: 0; }
-body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 16px; }
-.panel { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #0f4c81; }
+html, body { min-height: 100%; margin: 0; }
+body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f4c81; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.page { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 32px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.panel { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #0f4c81; }
+.controls { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; width: 100%; }
+.controls label { display: flex; align-items: center; gap: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.85); padding: 10px 12px; border-radius: 12px; box-shadow: 0 4px 16px rgba(15, 76, 129, 0.08); }
+.controls input[type="range"] { width: 150px; accent-color: #0f4c81; }
+.btn { background: #0f4c81; color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-size: 15px; cursor: pointer; transition: transform 0.2s ease, opacity 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn-secondary { background: #ffffff; color: #0f4c81; border: 1px solid rgba(15, 76, 129, 0.18); }
 .time-left { font-size: 32px; font-weight: 700; color: #0f4c81; }
-.controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.controls label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.controls input[type="range"] { width: 180px; accent-color: #0f4c81; }
-.btn { background: #0f4c81; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 16px; cursor: pointer; }
-.wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.wrap { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 320px; }
 .circle { position: relative; width: 240px; height: 240px; border-radius: 50%; background: #a7d8f0; display: flex; align-items: center; justify-content: center; transform: scale(0.7); transition: transform 4s ease-in-out; will-change: transform; box-shadow: 0 8px 24px rgba(167, 216, 240, 0.6); }
 .circle::before { content: ""; position: absolute; inset: -28px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle at center, rgba(167,216,240,0.65) 30%, rgba(167,216,240,0.35) 65%, rgba(255,255,255,1) 100%); filter: blur(0.6px); display: none; }
 .wave-svg { position: absolute; top: -56px; left: -56px; width: 352px; height: 352px; pointer-events: none; z-index: -1; filter: blur(0.6px); overflow: visible; }
 .circle.vibrating .wave-svg { animation: ringPulse 2s ease-in-out infinite; }
-.github-link { position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; opacity: 0.6; transition: opacity 0.3s; z-index: 1000; color: #0f4c81; }
-.github-link:hover { opacity: 1; }
-.github-link svg { width: 100%; height: 100%; fill: currentColor; }
+.label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
+.calendar-section { width: 100%; background: rgba(255, 255, 255, 0.92); border-radius: 20px; box-shadow: 0 12px 30px rgba(15, 76, 129, 0.08); padding: 20px; box-sizing: border-box; }
+.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.calendar-nav { display: flex; align-items: center; gap: 10px; }
+.nav-btn, .month-title-btn { border: none; background: transparent; color: #0f4c81; cursor: pointer; }
+.nav-btn { width: 38px; height: 38px; border-radius: 50%; background: rgba(15, 76, 129, 0.08); font-size: 18px; }
+.month-title-btn { font-size: 24px; font-weight: 700; padding: 6px 10px; border-radius: 10px; }
+.month-title-btn:hover, .nav-btn:hover { background: rgba(15, 76, 129, 0.12); }
+.calendar-summary { margin-top: 10px; font-size: 15px; color: #3d6990; }
+.sync-status { margin-top: 6px; min-height: 20px; font-size: 13px; color: #6b8097; }
+.sync-status[data-tone="success"] { color: #16824b; }
+.sync-status[data-tone="error"] { color: #b03a48; }
+.sync-status[data-tone="info"] { color: #3d6990; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.calendar-weekdays { margin-top: 18px; font-size: 13px; color: #6b8097; text-align: center; }
+.calendar-grid { margin-top: 10px; }
+.calendar-cell { min-height: 108px; padding: 10px; border-radius: 14px; background: #f8fbfe; border: 1px solid rgba(15, 76, 129, 0.08); box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+.calendar-cell.is-other-month { opacity: 0.45; }
+.calendar-cell.is-today { border-color: rgba(15, 76, 129, 0.35); box-shadow: inset 0 0 0 1px rgba(15, 76, 129, 0.12); }
+.date-number { font-size: 18px; font-weight: 700; }
+.calendar-metric { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: #55718f; }
+.metric-value { font-size: 14px; font-weight: 700; color: #0f4c81; }
 @keyframes ringPulse {
   0%   { transform: scale(1); opacity: 0.95; }
   50%  { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); opacity: 0.95; }
 }
-.label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
+@media (max-width: 768px) {
+  .page { width: calc(100% - 24px); padding-top: 16px; }
+  .controls { justify-content: stretch; }
+  .controls label { width: 100%; box-sizing: border-box; justify-content: space-between; }
+  .controls input[type="range"] { width: 120px; }
+  .time-left { font-size: 28px; }
+  .calendar-section { padding: 16px; }
+  .calendar-cell { min-height: 96px; padding: 8px; }
+  .month-title-btn { font-size: 20px; }
+}
+@media (max-width: 576px) {
+  .calendar-toolbar { align-items: stretch; }
+  .calendar-nav { justify-content: center; }
+  .calendar-actions { display: flex; justify-content: center; }
+  .calendar-weekdays, .calendar-grid { gap: 6px; }
+  .calendar-cell { min-height: 88px; }
+  .date-number { font-size: 16px; }
+  .calendar-metric { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .metric-value { font-size: 13px; }
+}
 </style>
 </head>
 <body>
-<div class="panel">
-  <div class="controls">
-    <label>吸时长
-      <input id="inhaleRange" type="range" min="1" max="20" step="1" value="4">
-      <span id="inhaleVal">4</span>s
-    </label>
-    <label>呼时长
-      <input id="exhaleRange" type="range" min="1" max="30" step="1" value="6">
-      <span id="exhaleVal">6</span>s
-    </label>
-    <label>暂停时长
-      <input id="pauseRange" type="range" min="0" max="15" step="1" value="0">
-      <span id="pauseVal">0</span>s
-    </label>
-    <button id="toggleBtn" class="btn">开始</button>
+<main class="page">
+  <section class="panel">
+    <div class="controls">
+      <label>吸时长
+        <input id="inhaleRange" type="range" min="1" max="20" step="1" value="4">
+        <span id="inhaleVal">4</span>s
+      </label>
+      <label>呼时长
+        <input id="exhaleRange" type="range" min="1" max="30" step="1" value="6">
+        <span id="exhaleVal">6</span>s
+      </label>
+      <label>暂停时长
+        <input id="pauseRange" type="range" min="0" max="15" step="1" value="0">
+        <span id="pauseVal">0</span>s
+      </label>
+      <button id="toggleBtn" class="btn">开始</button>
+    </div>
+  </section>
+
+  <div class="time-left">剩余时间：<span id="remaining">10:00</span></div>
+
+  <div class="wrap">
+    <div id="circle" class="circle">
+      <svg class="wave-svg" viewBox="0 0 296 296">
+        <path id="wavePath" fill="#8dc8ea" d=""></path>
+      </svg>
+      <div id="label" class="label"></div>
+    </div>
   </div>
-</div>
-<div class="time-left">剩余时间：<span id="remaining">10:00</span></div>
-<div class="wrap">
-  <div id="circle" class="circle">
-    <svg class="wave-svg" viewBox="0 0 296 296">
-      <path id="wavePath" fill="#8dc8ea" d="" />
-    </svg>
-    <div id="label" class="label"></div>
-  </div>
-</div>
-<script>
+
+  <section class="calendar-section">
+    <div class="calendar-toolbar">
+      <div class="calendar-nav">
+        <button id="prevMonthBtn" class="nav-btn" type="button" aria-label="上一个月">◀</button>
+        <button id="monthTitleBtn" class="month-title-btn" type="button" title="点击跳转到指定年月"></button>
+        <button id="nextMonthBtn" class="nav-btn" type="button" aria-label="下一个月">▶</button>
+      </div>
+      <div class="calendar-actions">
+        <button id="configBtn" class="btn btn-secondary" type="button">Config</button>
+      </div>
+    </div>
+    <div id="calendarSummary" class="calendar-summary"></div>
+    <div id="syncStatus" class="sync-status"></div>
+    <div class="calendar-weekdays">
+      <div>日</div>
+      <div>一</div>
+      <div>二</div>
+      <div>三</div>
+      <div>四</div>
+      <div>五</div>
+      <div>六</div>
+    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script type="module">
+import { R2Sync } from './r2-sync.js';
+
+const DEFAULT_SESSION_SECONDS = 600;
+const SETTINGS_KEY = 'breath_settings';
+const HISTORY_KEY = 'breath_history';
+const LAST_SYNC_KEY = 'breath_history_last_sync';
+const HISTORY_ENTITY = 'breath-history';
+
 const circle = document.getElementById('circle');
 const label = document.getElementById('label');
 const inhaleRange = document.getElementById('inhaleRange');
@@ -76,70 +157,385 @@ const exhaleVal = document.getElementById('exhaleVal');
 const pauseVal = document.getElementById('pauseVal');
 const remainingEl = document.getElementById('remaining');
 const toggleBtn = document.getElementById('toggleBtn');
+const configBtn = document.getElementById('configBtn');
+const prevMonthBtn = document.getElementById('prevMonthBtn');
+const nextMonthBtn = document.getElementById('nextMonthBtn');
+const monthTitleBtn = document.getElementById('monthTitleBtn');
+const calendarGrid = document.getElementById('calendarGrid');
+const calendarSummary = document.getElementById('calendarSummary');
+const syncStatus = document.getElementById('syncStatus');
 
-function formatTime(s){ const m = Math.floor(s/60); const ss = s%60; return String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0'); }
-function getInhale(){ return parseInt(inhaleRange.value,10); }
-function getExhale(){ return parseInt(exhaleRange.value,10); }
-function getPause(){ return parseInt(pauseRange.value,10); }
+const r2Sync = new R2Sync();
 
-const SETTINGS_KEY = 'breath_settings';
-function saveSettings(){
-  const data = { inhale: getInhale(), exhale: getExhale(), pause: getPause() };
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch(e){}
+let phase = 'inhale';
+let secondsLeft = 0;
+let sessionLeft = DEFAULT_SESSION_SECONDS;
+let running = false;
+let timer = null;
+let nextAfterPause = null;
+let audioCtx = null;
+let activeRun = null;
+let historyRecords = loadHistoryRecords();
+let displayedMonth = startOfMonth(new Date());
+
+function pad(value) {
+  return String(value).padStart(2, '0');
 }
-function loadSettings(){
+
+function formatTime(seconds) {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainingSeconds = safeSeconds % 60;
+  return `${pad(minutes)}:${pad(remainingSeconds)}`;
+}
+
+function formatMonthTitle(date) {
+  return `${date.getFullYear()}- ${pad(date.getMonth() + 1)}`;
+}
+
+function formatMonthInput(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+}
+
+function formatDurationCompact(seconds) {
+  const safeSeconds = Math.max(0, seconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h${pad(minutes)}`;
+  }
+  return `${pad(minutes)}:${pad(remainingSeconds)}`;
+}
+
+function formatDurationLong(seconds) {
+  const safeSeconds = Math.max(0, seconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}小时`);
+  if (minutes > 0 || hours > 0) parts.push(`${minutes}分`);
+  parts.push(`${remainingSeconds}秒`);
+  return parts.join('');
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function shiftMonth(date, offset) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+
+function getDateKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function getInhale() {
+  return parseInt(inhaleRange.value, 10);
+}
+
+function getExhale() {
+  return parseInt(exhaleRange.value, 10);
+}
+
+function getPause() {
+  return parseInt(pauseRange.value, 10);
+}
+
+function getSettingsSnapshot() {
+  return {
+    inhale: getInhale(),
+    exhale: getExhale(),
+    pause: getPause()
+  };
+}
+
+function setSyncStatus(message, tone = '') {
+  syncStatus.textContent = message;
+  if (tone) {
+    syncStatus.dataset.tone = tone;
+  } else {
+    delete syncStatus.dataset.tone;
+  }
+}
+
+function refreshSyncStatus() {
+  if (!r2Sync.config.enabled) {
+    setSyncStatus('云同步未启用，当前仅保存在本地浏览器。');
+    return;
+  }
+  const lastSyncedAt = localStorage.getItem(LAST_SYNC_KEY);
+  if (lastSyncedAt) {
+    setSyncStatus(`云同步已启用，上次同步：${new Date(lastSyncedAt).toLocaleString()}`, 'success');
+    return;
+  }
+  setSyncStatus('云同步已启用，等待首次同步。', 'info');
+}
+
+function saveSettings() {
+  const data = getSettingsSnapshot();
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error('Save settings failed:', error);
+  }
+}
+
+function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw){
+    if (raw) {
       const data = JSON.parse(raw);
       if (typeof data.inhale === 'number') inhaleRange.value = String(data.inhale);
       if (typeof data.exhale === 'number') exhaleRange.value = String(data.exhale);
       if (typeof data.pause === 'number') pauseRange.value = String(data.pause);
     }
-  } catch(e){}
+  } catch (error) {
+    console.error('Load settings failed:', error);
+  }
   inhaleVal.textContent = inhaleRange.value;
   exhaleVal.textContent = exhaleRange.value;
   pauseVal.textContent = pauseRange.value;
 }
 
-let phase = 'inhale';
-let secondsLeft = 0;
-let sessionLeft = 600;
-let running = false;
-let timer = null;
-let nextAfterPause = null;
-let audioCtx = null;
+function normalizeRecord(record) {
+  if (!record || typeof record !== 'object') return null;
+  const startedAt = typeof record.startedAt === 'string' ? record.startedAt : null;
+  const endedAt = typeof record.endedAt === 'string' ? record.endedAt : null;
+  const durationSec = Number(record.durationSec);
+  if (!startedAt || !endedAt || !Number.isFinite(durationSec) || durationSec <= 0) {
+    return null;
+  }
+  const settings = record.settings && typeof record.settings === 'object' ? record.settings : {};
+  const fallbackId = [startedAt, endedAt, durationSec, settings.inhale, settings.exhale, settings.pause].join('|');
+  return {
+    id: typeof record.id === 'string' && record.id ? record.id : fallbackId,
+    startedAt,
+    endedAt,
+    durationSec: Math.round(durationSec),
+    settings: {
+      inhale: Number(settings.inhale) || 0,
+      exhale: Number(settings.exhale) || 0,
+      pause: Number(settings.pause) || 0
+    },
+    sessionRemainingAtStart: Number(record.sessionRemainingAtStart) || 0,
+    sessionRemainingAtEnd: Number(record.sessionRemainingAtEnd) || 0,
+    reason: typeof record.reason === 'string' ? record.reason : 'stop'
+  };
+}
 
-function ensureAudio(){
-  if (!audioCtx){
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+function mergeHistories(...lists) {
+  const merged = new Map();
+  lists.flat().forEach((item) => {
+    const record = normalizeRecord(item);
+    if (!record) return;
+    merged.set(record.id, record);
+  });
+  return Array.from(merged.values()).sort((a, b) => {
+    return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+  });
+}
+
+function loadHistoryRecords() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? mergeHistories(parsed) : [];
+  } catch (error) {
+    console.error('Load history failed:', error);
+    return [];
   }
 }
 
-function playBeep(durationSec){
+function saveHistoryRecords(records) {
+  historyRecords = mergeHistories(records);
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(historyRecords));
+  } catch (error) {
+    console.error('Save history failed:', error);
+  }
+  renderCalendar();
+}
+
+async function syncHistoryToCloud() {
+  if (!r2Sync.config.enabled) {
+    refreshSyncStatus();
+    return;
+  }
+  setSyncStatus('正在同步到云端...', 'info');
+  const ok = await r2Sync.syncToR2(historyRecords, HISTORY_ENTITY);
+  if (ok) {
+    const now = new Date().toISOString();
+    localStorage.setItem(LAST_SYNC_KEY, now);
+    setSyncStatus(`云端同步完成：${new Date(now).toLocaleString()}`, 'success');
+  } else {
+    setSyncStatus('云端同步失败，请检查 R2 配置。', 'error');
+  }
+}
+
+async function hydrateHistoryFromCloud() {
+  if (!r2Sync.config.enabled) {
+    refreshSyncStatus();
+    return false;
+  }
+  setSyncStatus('正在从云端获取记录...', 'info');
+  const remoteRecords = await r2Sync.loadFromR2(HISTORY_ENTITY);
+  if (!Array.isArray(remoteRecords)) {
+    refreshSyncStatus();
+    return false;
+  }
+  const merged = mergeHistories(historyRecords, remoteRecords);
+  const changed = JSON.stringify(merged) !== JSON.stringify(historyRecords);
+  if (changed) {
+    saveHistoryRecords(merged);
+  } else {
+    renderCalendar();
+  }
+  setSyncStatus(`已从云端更新 ${remoteRecords.length} 条记录。`, 'success');
+  return changed;
+}
+
+function aggregateHistoryByDate() {
+  const daily = {};
+  historyRecords.forEach((record) => {
+    const date = new Date(record.startedAt);
+    if (Number.isNaN(date.getTime())) return;
+    const key = getDateKey(date);
+    if (!daily[key]) {
+      daily[key] = { count: 0, durationSec: 0 };
+    }
+    daily[key].count += 1;
+    daily[key].durationSec += record.durationSec;
+  });
+  return daily;
+}
+
+function renderCalendar() {
+  const metricsByDate = aggregateHistoryByDate();
+  const year = displayedMonth.getFullYear();
+  const month = displayedMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const firstWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const todayKey = getDateKey(new Date());
+  const monthRecords = historyRecords.filter((record) => {
+    const date = new Date(record.startedAt);
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+  const monthCount = monthRecords.length;
+  const monthDurationSec = monthRecords.reduce((total, record) => total + record.durationSec, 0);
+
+  monthTitleBtn.textContent = formatMonthTitle(displayedMonth);
+  calendarSummary.textContent = `本月共 ${monthCount} 次呼吸练习，累计 ${formatDurationLong(monthDurationSec)}。点击年月标题可直接跳转。`;
+  calendarGrid.innerHTML = '';
+
+  for (let index = 0; index < 42; index += 1) {
+    const cell = document.createElement('div');
+    cell.className = 'calendar-cell';
+    let cellDate;
+    let inCurrentMonth = true;
+
+    if (index < firstWeekday) {
+      cellDate = new Date(year, month - 1, daysInPrevMonth - firstWeekday + index + 1);
+      inCurrentMonth = false;
+    } else if (index >= firstWeekday + daysInMonth) {
+      cellDate = new Date(year, month + 1, index - firstWeekday - daysInMonth + 1);
+      inCurrentMonth = false;
+    } else {
+      cellDate = new Date(year, month, index - firstWeekday + 1);
+    }
+
+    const key = getDateKey(cellDate);
+    const metric = metricsByDate[key] || { count: 0, durationSec: 0 };
+
+    if (!inCurrentMonth) {
+      cell.classList.add('is-other-month');
+    }
+    if (key === todayKey) {
+      cell.classList.add('is-today');
+    }
+
+    cell.innerHTML = `
+      <div class="date-number">${cellDate.getDate()}</div>
+      <div class="calendar-metric">
+        <span>次数</span>
+        <span class="metric-value">${metric.count}</span>
+      </div>
+      <div class="calendar-metric">
+        <span>时长</span>
+        <span class="metric-value">${formatDurationCompact(metric.durationSec)}</span>
+      </div>
+    `;
+    calendarGrid.appendChild(cell);
+  }
+}
+
+function beginRunRecord() {
+  activeRun = {
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `run-${Date.now()}`,
+    startedAtMs: Date.now(),
+    startedAt: new Date().toISOString(),
+    settings: getSettingsSnapshot(),
+    sessionRemainingAtStart: sessionLeft
+  };
+}
+
+function finalizeRunRecord(reason) {
+  if (!activeRun) return;
+  const endedAtMs = Date.now();
+  const durationSec = Math.max(1, Math.ceil((endedAtMs - activeRun.startedAtMs) / 1000));
+  const record = {
+    id: activeRun.id,
+    startedAt: activeRun.startedAt,
+    endedAt: new Date(endedAtMs).toISOString(),
+    durationSec,
+    settings: activeRun.settings,
+    sessionRemainingAtStart: activeRun.sessionRemainingAtStart,
+    sessionRemainingAtEnd: sessionLeft,
+    reason
+  };
+  activeRun = null;
+  saveHistoryRecords([...historyRecords, record]);
+  void syncHistoryToCloud();
+}
+
+function ensureAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (error) {
+      console.error('Audio init failed:', error);
+    }
+  }
+}
+
+function playBeep(durationSec) {
   if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
   osc.frequency.value = 600;
-  const t = audioCtx.currentTime;
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.06, t + 0.03);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + durationSec);
+  const now = audioCtx.currentTime;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.06, now + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-  osc.start(t);
-  osc.stop(t + durationSec + 0.05);
+  osc.start(now);
+  osc.stop(now + durationSec + 0.05);
 }
 
-function playPhaseTone(name){
-  const d = name === 'pause' ? 0.4 : 1.2;
-  playBeep(d);
+function playPhaseTone(name) {
+  playBeep(name === 'pause' ? 0.4 : 1.2);
 }
 
-function startPhase(name){
+function startPhase(name) {
   phase = name;
-  if (name === 'pause'){
+  if (name === 'pause') {
     secondsLeft = getPause();
     circle.classList.remove('vibrating');
     circle.style.transitionDuration = '0s';
@@ -155,46 +551,47 @@ function startPhase(name){
   if (running) playPhaseTone(name);
 }
 
-function tick(){
+function tick() {
   sessionLeft -= 1;
-  if (sessionLeft <= 0){
+  if (sessionLeft <= 0) {
     finish();
     return;
   }
   remainingEl.textContent = formatTime(sessionLeft);
   secondsLeft -= 1;
-  if (secondsLeft > 0){
+  if (secondsLeft > 0) {
     label.textContent = phase === 'pause' ? ('停' + secondsLeft) : ((phase === 'inhale' ? '吸' : '呼') + secondsLeft);
     return;
   }
-  if (phase === 'pause'){
+  if (phase === 'pause') {
     startPhase(nextAfterPause || 'inhale');
     nextAfterPause = null;
     return;
   }
-  const p = getPause();
-  if (p > 0){
-    nextAfterPause = (phase === 'inhale') ? 'exhale' : 'inhale';
+  const pause = getPause();
+  if (pause > 0) {
+    nextAfterPause = phase === 'inhale' ? 'exhale' : 'inhale';
     startPhase('pause');
     return;
   }
-  startPhase((phase === 'inhale') ? 'exhale' : 'inhale');
+  startPhase(phase === 'inhale' ? 'exhale' : 'inhale');
 }
 
-function start(){
-  if (sessionLeft <= 0){
-    sessionLeft = 600;
+function start() {
+  if (running) return;
+  if (sessionLeft <= 0) {
+    sessionLeft = DEFAULT_SESSION_SECONDS;
     remainingEl.textContent = formatTime(sessionLeft);
   }
-  if (secondsLeft <= 0){
+  if (secondsLeft <= 0) {
     startPhase(phase);
   }
+  beginRunRecord();
   running = true;
-  toggleBtn.textContent = '停止';
+  toggleBtn.textContent = '结束';
   ensureAudio();
-  timer = setInterval(tick, 1000);
-  
-  // Analytics
+  timer = window.setInterval(tick, 1000);
+
   if (typeof gtag === 'function') {
     gtag('event', 'start_practice', {
       inhale: getInhale(),
@@ -204,13 +601,17 @@ function start(){
   }
 }
 
-function stop(){
+function stop(reason = 'stop') {
+  if (!running && !activeRun) return;
   running = false;
   toggleBtn.textContent = '开始';
-  if (timer){ clearInterval(timer); timer = null; }
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
   circle.classList.remove('vibrating');
-  
-  // Analytics
+  finalizeRunRecord(reason);
+
   if (typeof gtag === 'function') {
     gtag('event', 'stop_practice', {
       remaining_seconds: sessionLeft
@@ -218,126 +619,161 @@ function stop(){
   }
 }
 
-function finish(){
-  stop();
+function finish() {
+  stop('finish');
   label.textContent = '完成';
   circle.style.transitionDuration = '0.5s';
   circle.style.transform = 'scale(1)';
   remainingEl.textContent = '00:00';
   circle.classList.remove('vibrating');
 
-  // Analytics
   if (typeof gtag === 'function') {
     gtag('event', 'complete_practice');
   }
 }
 
-loadSettings();
-remainingEl.textContent = formatTime(sessionLeft);
-label.textContent = '吸' + inhaleRange.value;
+function generateWaves() {
+  const path = document.getElementById('wavePath');
+  const size = 352;
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const baseRadius = size / 2;
+  const maxWaveHeight = 24;
+  const segments = 24;
+  const points = [];
+
+  for (let index = 0; index < segments; index += 1) {
+    const angle = (index / segments) * Math.PI * 2;
+    const sineValue = Math.sin(angle * 6);
+    const normalizedSine = (sineValue + 1) / 2;
+    const radius = baseRadius - normalizedSine * maxWaveHeight;
+
+    points.push({
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius
+    });
+  }
+
+  const midPoints = [];
+  for (let index = 0; index < points.length; index += 1) {
+    const pointA = points[index];
+    const pointB = points[(index + 1) % points.length];
+    midPoints.push({
+      x: (pointA.x + pointB.x) / 2,
+      y: (pointA.y + pointB.y) / 2
+    });
+  }
+
+  let d = `M ${midPoints[0].x} ${midPoints[0].y}`;
+  for (let index = 0; index < points.length; index += 1) {
+    const controlPoint = points[(index + 1) % points.length];
+    const destination = midPoints[(index + 1) % midPoints.length];
+    d += ` Q ${controlPoint.x} ${controlPoint.y}, ${destination.x} ${destination.y}`;
+  }
+
+  path.setAttribute('d', d);
+}
+
+function trackSettingChange(setting, value) {
+  if (typeof gtag === 'function') {
+    gtag('event', 'update_setting', {
+      setting_name: setting,
+      value
+    });
+  }
+}
+
+function jumpToMonth() {
+  const input = window.prompt('请输入年月（YYYY-MM）', formatMonthInput(displayedMonth));
+  if (!input) return;
+  const match = input.trim().match(/^(\d{4})-(\d{1,2})$/);
+  if (!match) {
+    window.alert('请输入正确格式，例如：2026-04');
+    return;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) {
+    window.alert('月份需要在 1 到 12 之间。');
+    return;
+  }
+  displayedMonth = new Date(year, month - 1, 1);
+  renderCalendar();
+}
+
+toggleBtn.addEventListener('click', () => {
+  if (!running) {
+    start();
+  } else {
+    stop('stop');
+  }
+});
+
+configBtn.addEventListener('click', () => {
+  r2Sync.createConfigDialog(async () => {
+    const mergedFromCloud = await hydrateHistoryFromCloud();
+    if (historyRecords.length > 0 || mergedFromCloud) {
+      await syncHistoryToCloud();
+    } else {
+      refreshSyncStatus();
+    }
+  });
+});
+
+prevMonthBtn.addEventListener('click', () => {
+  displayedMonth = shiftMonth(displayedMonth, -1);
+  renderCalendar();
+});
+
+nextMonthBtn.addEventListener('click', () => {
+  displayedMonth = shiftMonth(displayedMonth, 1);
+  renderCalendar();
+});
+
+monthTitleBtn.addEventListener('click', jumpToMonth);
 
 inhaleRange.addEventListener('input', () => {
   inhaleVal.textContent = inhaleRange.value;
   saveSettings();
-  if (!running && sessionLeft > 0){
-    if (phase === 'inhale') label.textContent = '吸' + inhaleRange.value;
+  if (!running && sessionLeft > 0 && phase === 'inhale') {
+    label.textContent = '吸' + inhaleRange.value;
   }
 });
 
 exhaleRange.addEventListener('input', () => {
   exhaleVal.textContent = exhaleRange.value;
   saveSettings();
-  if (!running && sessionLeft > 0){
-    if (phase === 'exhale') label.textContent = '呼' + exhaleRange.value;
+  if (!running && sessionLeft > 0 && phase === 'exhale') {
+    label.textContent = '呼' + exhaleRange.value;
   }
 });
 
 pauseRange.addEventListener('input', () => {
   pauseVal.textContent = pauseRange.value;
   saveSettings();
-  if (!running && sessionLeft > 0){
-    if (phase === 'pause') label.textContent = '停' + pauseRange.value;
+  if (!running && sessionLeft > 0 && phase === 'pause') {
+    label.textContent = '停' + pauseRange.value;
   }
 });
-
-function generateWaves() {
-   const path = document.getElementById('wavePath');
-   const size = 352;
-   const cx = size / 2;
-   const cy = size / 2;
-   const rBase = size / 2;
-    const ringWidth = 56; 
-    const maxWaveHeight = 24; // 限制波浪幅度，保留更多实心部分
-    
-    // Generate points
-    const points = [];
-    const segments = 24; // 稍微增加段数，使波浪更密集一些
-    for (let i = 0; i < segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      
-      // 使用正弦波产生规律起伏
-      const sineVal = Math.sin(angle * 6); // 6个波峰
-      const normalizedSine = (sineVal + 1) / 2; // 0 to 1
-      
-      // 让波浪在最外层波动
-      // r 变化范围：rBase - maxWaveHeight 到 rBase
-      const offset = normalizedSine * maxWaveHeight; 
-      
-      const r = rBase - offset;
-      
-      points.push({
-        x: cx + Math.cos(angle) * r,
-        y: cy + Math.sin(angle) * r
-      });
-    }
-   
-   // Close the loop
-   // To make it smooth, we use Quadratic Bezier curves between midpoints of segments
-   let d = "";
-   
-   // Find midpoints
-   const midPoints = [];
-   for (let i = 0; i < points.length; i++) {
-     const p1 = points[i];
-     const p2 = points[(i + 1) % points.length];
-     midPoints.push({
-       x: (p1.x + p2.x) / 2,
-       y: (p1.y + p2.y) / 2
-     });
-   }
-   
-   // Start from first midpoint
-   d += `M ${midPoints[0].x} ${midPoints[0].y}`;
-   
-   // Loop through points and draw Quad Bezier to next midpoint
-   for (let i = 0; i < points.length; i++) {
-     const p = points[(i + 1) % points.length]; // The control point (the actual point on ring)
-     const nextMid = midPoints[(i + 1) % midPoints.length]; // The destination
-     
-     d += ` Q ${p.x} ${p.y}, ${nextMid.x} ${nextMid.y}`;
-   }
-   
-   path.setAttribute('d', d);
- }
-
-toggleBtn.addEventListener('click', () => {
-  if (!running){ start(); } else { stop(); }
-});
-
-// Analytics: Settings changes
-const trackSettingChange = (setting, value) => {
-  if (typeof gtag === 'function') {
-    gtag('event', 'update_setting', {
-      setting_name: setting,
-      value: value
-    });
-  }
-};
 
 inhaleRange.addEventListener('change', () => trackSettingChange('inhale', getInhale()));
 exhaleRange.addEventListener('change', () => trackSettingChange('exhale', getExhale()));
 pauseRange.addEventListener('change', () => trackSettingChange('pause', getPause()));
 
+async function init() {
+  loadSettings();
+  remainingEl.textContent = formatTime(sessionLeft);
+  label.textContent = '吸' + inhaleRange.value;
+  generateWaves();
+  renderCalendar();
+  refreshSyncStatus();
+  const mergedFromCloud = await hydrateHistoryFromCloud();
+  if (mergedFromCloud && historyRecords.length > 0) {
+    await syncHistoryToCloud();
+  }
+}
+
+void init();
 </script>
 </body>
 </html>
