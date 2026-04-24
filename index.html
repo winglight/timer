@@ -44,14 +44,16 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .sync-status[data-tone="success"] { color: #16824b; }
 .sync-status[data-tone="error"] { color: #b03a48; }
 .sync-status[data-tone="info"] { color: #3d6990; }
-.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .calendar-weekdays { margin-top: 18px; font-size: 13px; color: #6b8097; text-align: center; }
 .calendar-grid { margin-top: 10px; }
-.calendar-cell { min-height: 108px; padding: 10px; border-radius: 14px; background: #f8fbfe; border: 1px solid rgba(15, 76, 129, 0.08); box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; }
+.calendar-cell { position: relative; min-height: 72px; padding: 8px; border-radius: 12px; background: #f8fbfe; border: 1px solid rgba(15, 76, 129, 0.08); box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
 .calendar-cell.is-other-month { opacity: 0.45; }
 .calendar-cell.is-today { border-color: rgba(15, 76, 129, 0.35); box-shadow: inset 0 0 0 1px rgba(15, 76, 129, 0.12); }
-.date-number { font-size: 18px; font-weight: 700; }
-.calendar-metric-inline { margin-top: auto; font-size: 14px; font-weight: 700; color: #0f4c81; line-height: 1.4; word-break: break-word; }
+.calendar-cell.is-goal-met { background: #e8f6e8; }
+.calendar-cell.is-goal-missed::after { content: "X"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; color: rgba(126, 24, 24, 0.2); pointer-events: none; }
+.date-number { position: relative; z-index: 1; font-size: 16px; font-weight: 700; }
+.calendar-metric-inline { position: relative; z-index: 1; margin-top: auto; font-size: 14px; font-weight: 700; color: #0f4c81; line-height: 1.2; word-break: break-word; }
 @keyframes ringPulse {
   0%   { transform: scale(1); opacity: 0.95; }
   50%  { transform: scale(1.08); opacity: 1; }
@@ -71,10 +73,11 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .calendar-toolbar { align-items: stretch; }
   .calendar-nav { justify-content: center; }
   .calendar-actions { display: flex; justify-content: center; }
-  .calendar-weekdays, .calendar-grid { gap: 6px; }
-  .calendar-cell { min-height: 88px; }
-  .date-number { font-size: 16px; }
-  .calendar-metric-inline { font-size: 13px; }
+  .calendar-weekdays, .calendar-grid { gap: 5px; }
+  .calendar-cell { min-height: 64px; padding: 7px; }
+  .calendar-cell.is-goal-missed::after { font-size: 36px; }
+  .date-number { font-size: 15px; }
+  .calendar-metric-inline { font-size: 12px; }
 }
 </style>
 </head>
@@ -140,6 +143,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 import { R2Sync } from './r2-sync.js';
 
 const DEFAULT_SESSION_SECONDS = 600;
+const DAILY_GOAL_SECONDS = 600;
 const SETTINGS_KEY = 'breath_settings';
 const HISTORY_KEY = 'breath_history';
 const LAST_SYNC_KEY = 'breath_history_last_sync';
@@ -208,10 +212,7 @@ function formatDurationCompact(seconds) {
 
 function formatDurationMinutes(seconds) {
   const safeSeconds = Math.max(0, seconds);
-  if (safeSeconds === 0) {
-    return '0分钟';
-  }
-  return `${Math.ceil(safeSeconds / 60)}分钟`;
+  return String(Math.ceil(safeSeconds / 60));
 }
 
 function formatDurationLong(seconds) {
@@ -448,7 +449,9 @@ function renderCalendar() {
   const firstWeekday = firstDay.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
-  const todayKey = getDateKey(new Date());
+  const today = new Date();
+  const todayKey = getDateKey(today);
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const monthRecords = historyRecords.filter((record) => {
     const date = new Date(record.startedAt);
     return date.getFullYear() === year && date.getMonth() === month;
@@ -478,9 +481,16 @@ function renderCalendar() {
 
     const key = getDateKey(cellDate);
     const metric = metricsByDate[key] || { count: 0, durationSec: 0 };
+    const isGoalMet = metric.durationSec >= DAILY_GOAL_SECONDS;
+    const cellDateStart = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+    const isPastOrToday = cellDateStart.getTime() <= todayStart.getTime();
 
     if (!inCurrentMonth) {
       cell.classList.add('is-other-month');
+    } else if (isGoalMet) {
+      cell.classList.add('is-goal-met');
+    } else if (isPastOrToday) {
+      cell.classList.add('is-goal-missed');
     }
     if (key === todayKey) {
       cell.classList.add('is-today');
@@ -488,7 +498,7 @@ function renderCalendar() {
 
     cell.innerHTML = `
       <div class="date-number">${cellDate.getDate()}</div>
-      <div class="calendar-metric-inline">${metric.count}次｜${formatDurationMinutes(metric.durationSec)}</div>
+      <div class="calendar-metric-inline">${metric.count} | ${formatDurationMinutes(metric.durationSec)}</div>
     `;
     calendarGrid.appendChild(cell);
   }
