@@ -47,13 +47,14 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .calendar-weekdays { margin-top: 10px; font-size: 10px; color: #6b8097; text-align: center; }
 .calendar-grid { margin-top: 6px; }
-.calendar-cell { position: relative; aspect-ratio: 1 / 1; padding: 4px; border-radius: 8px; background: #f8fbfe; border: 1px solid rgba(15, 76, 129, 0.08); box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.calendar-cell { position: relative; aspect-ratio: 1 / 1; padding: 3px; border-radius: 8px; background: #f8fbfe; border: 1px solid rgba(15, 76, 129, 0.08); box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .calendar-cell.is-other-month { opacity: 0.45; }
 .calendar-cell.is-today { border-color: rgba(15, 76, 129, 0.35); box-shadow: inset 0 0 0 1px rgba(15, 76, 129, 0.12); }
 .calendar-cell.is-goal-met { background: #e8f6e8; }
 .calendar-cell.is-goal-missed { background: #fae7e7; }
-.date-number { position: relative; z-index: 1; font-size: 11px; font-weight: 700; }
-.calendar-metric-inline { position: relative; z-index: 1; margin-top: auto; font-size: 10px; font-weight: 700; color: #0f4c81; line-height: 1.1; word-break: break-word; }
+.date-number { position: relative; z-index: 1; font-size: 14px; font-weight: 700; }
+.calendar-metric-inline { position: relative; z-index: 1; margin-top: auto; font-size: 14px; font-weight: 700; color: #0f4c81; line-height: 1; word-break: break-word; }
+.calendar-metric-inline.is-empty { display: none; }
 @keyframes ringPulse {
   0%   { transform: scale(1); opacity: 0.95; }
   50%  { transform: scale(1.08); opacity: 1; }
@@ -75,8 +76,8 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .calendar-section { width: 100%; }
   .calendar-weekdays, .calendar-grid { gap: 3px; }
   .calendar-cell { padding: 3px; }
-  .date-number { font-size: 10px; }
-  .calendar-metric-inline { font-size: 9px; }
+  .date-number { font-size: 13px; }
+  .calendar-metric-inline { font-size: 12px; }
 }
 </style>
 </head>
@@ -483,6 +484,15 @@ function renderCalendar() {
     const isGoalMet = metric.durationSec >= DAILY_GOAL_SECONDS;
     const cellDateStart = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
     const isPastOrToday = cellDateStart.getTime() <= todayStart.getTime();
+    const metricParts = [];
+    if (metric.count > 0) {
+      metricParts.push(String(metric.count));
+    }
+    const minuteValue = Number(formatDurationMinutes(metric.durationSec));
+    if (minuteValue > 0) {
+      metricParts.push(String(minuteValue));
+    }
+    const metricText = metricParts.join(' | ');
 
     if (!inCurrentMonth) {
       cell.classList.add('is-other-month');
@@ -497,7 +507,7 @@ function renderCalendar() {
 
     cell.innerHTML = `
       <div class="date-number">${cellDate.getDate()}</div>
-      <div class="calendar-metric-inline">${metric.count} | ${formatDurationMinutes(metric.durationSec)}</div>
+      <div class="calendar-metric-inline${metricText ? '' : ' is-empty'}">${metricText}</div>
     `;
     calendarGrid.appendChild(cell);
   }
