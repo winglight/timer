@@ -69,7 +69,9 @@ export class R2Sync {
 
     // 从R2加载数据
     async loadFromR2(entity = 'todos') {
-        if (!this.config.enabled) return null;
+        if (!this.config.enabled) {
+            return { ok: false, reason: 'disabled', data: null };
+        }
         
         try {
             const response = await fetch(`${this.config.url}/${this.config.app}/${entity}.zip`, {
@@ -81,10 +83,15 @@ export class R2Sync {
             // 静默处理404错误，避免控制台报错
             if (!response.ok) {
                 if (response.status === 404) {
-                    // 文件不存在是正常情况，静默返回null
-                    return null;
+                    // 首次同步时文件不存在是正常情况
+                    return { ok: false, reason: 'not_found', data: null };
                 }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                return {
+                    ok: false,
+                    reason: 'http_error',
+                    status: response.status,
+                    data: null
+                };
             }
             
             // Get zip file blob
@@ -105,13 +112,15 @@ export class R2Sync {
                 });
             }
             
-            return JSON.parse(files[0].content);
+            return { ok: true, reason: 'ok', data: JSON.parse(files[0].content) };
         } catch (error) {
-            // 只在非404错误时输出日志
-            if (!error.message.includes('404')) {
-                console.error('Download failed:', error);
-            }
-            return null;
+            const isAbort = error && error.name === 'AbortError';
+            console.error('Download failed:', error);
+            return {
+                ok: false,
+                reason: isAbort ? 'timeout' : 'network_error',
+                data: null
+            };
         }
     }
 
