@@ -1,0 +1,89 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - text: 吸时长
+      - slider "吸时长 4 s" [ref=e6]: "4"
+      - generic [ref=e7]: "4"
+      - text: s
+    - generic [ref=e8]:
+      - text: 呼时长
+      - slider "呼时长 6 s" [ref=e9]: "6"
+      - generic [ref=e10]: "6"
+      - text: s
+    - generic [ref=e11]:
+      - text: 暂停时长
+      - slider "暂停时长 0 s" [ref=e12]: "0"
+      - generic [ref=e13]: "0"
+      - text: s
+    - button "开始" [ref=e14] [cursor=pointer]
+  - generic "双击修改时长（支持分钟或 MM:SS）" [ref=e15] [cursor=pointer]: 剩余时间：10:00
+  - generic [ref=e17]:
+    - generic [ref=e19]: 吸4
+    - img
+  - generic [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - button "上一个月" [ref=e23] [cursor=pointer]: ◀
+        - button "2026- 05" [ref=e24] [cursor=pointer]
+        - button "下一个月" [ref=e25] [cursor=pointer]: ▶
+      - button "Config" [ref=e27] [cursor=pointer]
+    - generic [ref=e28] [cursor=pointer]: 每日目标：20分钟（双击修改）
+    - generic [ref=e29]: 本月共 2 次呼吸练习，累计 10分8秒。点击年月标题可直接跳转。
+    - generic [ref=e30]: 云同步未启用，当前仅保存在本地浏览器。
+    - generic [ref=e31]:
+      - generic [ref=e32]: 日
+      - generic [ref=e33]: 一
+      - generic [ref=e34]: 二
+      - generic [ref=e35]: 三
+      - generic [ref=e36]: 四
+      - generic [ref=e37]: 五
+      - generic [ref=e38]: 六
+    - generic [ref=e39]:
+      - generic [ref=e41]: "26"
+      - generic [ref=e43]: "27"
+      - generic [ref=e45]: "28"
+      - generic [ref=e47]: "29"
+      - generic [ref=e48]:
+        - generic [ref=e49]: "30"
+        - generic [ref=e50]: 1 | 5
+      - generic [ref=e52]: "1"
+      - generic [ref=e54]: "2"
+      - generic [ref=e56]: "3"
+      - generic [ref=e58]: "4"
+      - generic [ref=e60]: "5"
+      - generic [ref=e62]: "6"
+      - generic [ref=e64]: "7"
+      - generic [ref=e66]: "8"
+      - generic [ref=e68]: "9"
+      - generic [ref=e70]: "10"
+      - generic [ref=e72]: "11"
+      - generic [ref=e74]: "12"
+      - generic [ref=e76]: "13"
+      - generic [ref=e78]: "14"
+      - generic [ref=e80]: "15"
+      - generic [ref=e82]: "16"
+      - generic [ref=e84]: "17"
+      - generic [ref=e86]: "18"
+      - generic [ref=e88]: "19"
+      - generic [ref=e90]: "20"
+      - generic [ref=e92]: "21"
+      - generic [ref=e94]: "22"
+      - generic [ref=e96]: "23"
+      - generic [ref=e98]: "24"
+      - generic [ref=e100]: "25"
+      - generic [ref=e102]: "26"
+      - generic [ref=e104]: "27"
+      - generic [ref=e106]: "28"
+      - generic [ref=e107]:
+        - generic [ref=e108]: "29"
+        - generic [ref=e109]: 2 | 11
+      - generic [ref=e111]: "30"
+      - generic [ref=e113]: "31"
+      - generic [ref=e114]:
+        - generic [ref=e115]: "1"
+        - generic [ref=e116]: 1 | 8
+      - generic [ref=e118]: "2"
+      - generic [ref=e120]: "3"
+      - generic [ref=e122]: "4"
+      - generic [ref=e124]: "5"
+      - generic [ref=e126]: "6"

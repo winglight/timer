@@ -25,12 +25,18 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .btn { background: #0f4c81; color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-size: 15px; cursor: pointer; transition: transform 0.2s ease, opacity 0.2s ease; }
 .btn:hover { transform: translateY(-1px); }
 .btn-secondary { background: #ffffff; color: #0f4c81; border: 1px solid rgba(15, 76, 129, 0.18); }
-.time-left { font-size: 32px; font-weight: 700; color: #0f4c81; }
-.wrap { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 320px; }
-.circle { position: relative; width: 240px; height: 240px; border-radius: 50%; background: #a7d8f0; display: flex; align-items: center; justify-content: center; transform: scale(0.7); transition: transform 4s ease-in-out; will-change: transform; box-shadow: 0 8px 24px rgba(167, 216, 240, 0.6); }
-.circle::before { content: ""; position: absolute; inset: -28px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle at center, rgba(167,216,240,0.65) 30%, rgba(167,216,240,0.35) 65%, rgba(255,255,255,1) 100%); filter: blur(0.6px); display: none; }
-.wave-svg { position: absolute; top: -56px; left: -56px; width: 352px; height: 352px; pointer-events: none; z-index: -1; filter: blur(0.6px); overflow: visible; }
-.circle.vibrating .wave-svg { animation: ringPulse 2s ease-in-out infinite; }
+.time-left { font-size: 32px; font-weight: 700; color: #0f4c81; cursor: default; }
+.time-left.is-editable { cursor: pointer; }
+.wrap { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 360px; }
+.breath-visual { position: relative; width: 360px; height: 360px; display: flex; align-items: center; justify-content: center; }
+.circle { position: absolute; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #b8e4f8 0%, #a7d8f0 52%, #94cbe8 100%); display: flex; align-items: center; justify-content: center; transform: scale(0.72); transform-origin: center; transition: transform 4s ease-in-out, box-shadow 0.8s ease; will-change: transform; box-shadow: 0 16px 40px rgba(120, 182, 220, 0.34); z-index: 2; }
+.wave-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+.wave-core { fill: rgba(149, 206, 236, 0.34); transform-origin: 180px 180px; transition: transform 4s ease-in-out, opacity 0.8s ease; }
+.particle-ring { transform-origin: 180px 180px; transition: transform 4s ease-in-out, opacity 0.8s ease; }
+.particle-ring circle { fill: rgba(144, 201, 233, 0.72); }
+.circle.vibrating ~ .wave-svg .wave-core { animation: waveFloat 4.8s ease-in-out infinite; opacity: 0.95; }
+.circle.vibrating ~ .wave-svg .particle-ring { animation: ringPulse 3.6s ease-in-out infinite; opacity: 1; }
+.circle.vibrating ~ .wave-svg .particle-ring circle { animation: particleDrift 3.2s ease-in-out infinite; }
 .label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
 .calendar-section { width: min(100%, 480px); background: rgba(255, 255, 255, 0.92); border-radius: 14px; box-shadow: 0 8px 20px rgba(15, 76, 129, 0.08); padding: 10px; box-sizing: border-box; }
 .calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -40,6 +46,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .month-title-btn { font-size: 16px; font-weight: 700; padding: 4px 6px; border-radius: 8px; }
 .month-title-btn:hover, .nav-btn:hover { background: rgba(15, 76, 129, 0.12); }
 .calendar-summary { margin-top: 6px; font-size: 11px; color: #3d6990; }
+.calendar-goal { margin-top: 6px; font-size: 12px; font-weight: 600; color: #0f4c81; cursor: pointer; }
 .sync-status { margin-top: 4px; min-height: 16px; font-size: 10px; color: #6b8097; }
 .sync-status[data-tone="success"] { color: #16824b; }
 .sync-status[data-tone="error"] { color: #b03a48; }
@@ -56,9 +63,18 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .calendar-metric-inline { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; align-self: stretch; justify-self: stretch; width: 100%; height: 100%; font-size: 18px; font-weight: 700; color: #0f4c81; line-height: 1; text-align: center; }
 .calendar-metric-inline.is-empty { display: none; }
 @keyframes ringPulse {
-  0%   { transform: scale(1); opacity: 0.95; }
-  50%  { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.95; }
+  0%   { transform: scale(0.98); opacity: 0.74; }
+  50%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(0.98); opacity: 0.74; }
+}
+@keyframes waveFloat {
+  0%   { transform: scale(0.99); opacity: 0.48; }
+  50%  { transform: scale(1.02); opacity: 0.76; }
+  100% { transform: scale(0.99); opacity: 0.48; }
+}
+@keyframes particleDrift {
+  0%, 100% { transform: scale(1); opacity: 0.74; }
+  50% { transform: scale(1.24); opacity: 1; }
 }
 @media (max-width: 768px) {
   .page { width: calc(100% - 24px); padding-top: 16px; }
@@ -66,6 +82,8 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .controls label { width: 100%; box-sizing: border-box; justify-content: space-between; }
   .controls input[type="range"] { width: 120px; }
   .time-left { font-size: 28px; }
+  .breath-visual { width: 320px; height: 320px; }
+  .circle { width: 220px; height: 220px; }
   .calendar-section { width: min(100%, 420px); padding: 9px; }
   .month-title-btn { font-size: 15px; }
 }
@@ -74,6 +92,9 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .calendar-nav { justify-content: center; }
   .calendar-actions { display: flex; justify-content: center; }
   .calendar-section { width: 100%; }
+  .wrap { min-height: 320px; }
+  .breath-visual { width: 288px; height: 288px; }
+  .circle { width: 204px; height: 204px; }
   .calendar-weekdays, .calendar-grid { gap: 3px; }
   .calendar-cell { padding: 4px; }
   .date-number { font-size: 13px; }
@@ -101,14 +122,17 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
     </div>
   </section>
 
-  <div class="time-left">剩余时间：<span id="remaining">10:00</span></div>
+  <div id="timeLeft" class="time-left">剩余时间：<span id="remaining">10:00</span></div>
 
   <div class="wrap">
-    <div id="circle" class="circle">
-      <svg class="wave-svg" viewBox="0 0 296 296">
-        <path id="wavePath" fill="#8dc8ea" d=""></path>
+    <div class="breath-visual">
+      <div id="circle" class="circle">
+        <div id="label" class="label"></div>
+      </div>
+      <svg class="wave-svg" viewBox="0 0 360 360" aria-hidden="true">
+        <path id="wavePath" class="wave-core" d=""></path>
+        <g id="particleRing" class="particle-ring"></g>
       </svg>
-      <div id="label" class="label"></div>
     </div>
   </div>
 
@@ -123,6 +147,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
         <button id="configBtn" class="btn btn-secondary" type="button">Config</button>
       </div>
     </div>
+    <div id="calendarGoal" class="calendar-goal"></div>
     <div id="calendarSummary" class="calendar-summary"></div>
     <div id="syncStatus" class="sync-status"></div>
     <div class="calendar-weekdays">
@@ -143,11 +168,12 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 import { R2Sync } from './r2-sync.js';
 
 const DEFAULT_SESSION_SECONDS = 600;
-const DAILY_GOAL_SECONDS = 600;
+const DEFAULT_DAILY_GOAL_SECONDS = 600;
 const SETTINGS_KEY = 'breath_settings';
 const HISTORY_KEY = 'breath_history';
 const LAST_SYNC_KEY = 'breath_history_last_sync';
 const HISTORY_ENTITY = 'breath-history';
+const SETTINGS_ENTITY = 'breath-settings';
 
 const circle = document.getElementById('circle');
 const label = document.getElementById('label');
@@ -157,6 +183,7 @@ const pauseRange = document.getElementById('pauseRange');
 const inhaleVal = document.getElementById('inhaleVal');
 const exhaleVal = document.getElementById('exhaleVal');
 const pauseVal = document.getElementById('pauseVal');
+const timeLeftEl = document.getElementById('timeLeft');
 const remainingEl = document.getElementById('remaining');
 const toggleBtn = document.getElementById('toggleBtn');
 const configBtn = document.getElementById('configBtn');
@@ -164,14 +191,16 @@ const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
 const monthTitleBtn = document.getElementById('monthTitleBtn');
 const calendarGrid = document.getElementById('calendarGrid');
+const calendarGoal = document.getElementById('calendarGoal');
 const calendarSummary = document.getElementById('calendarSummary');
 const syncStatus = document.getElementById('syncStatus');
+const wavePath = document.getElementById('wavePath');
+const particleRing = document.getElementById('particleRing');
 
 const r2Sync = new R2Sync();
 
 let phase = 'inhale';
 let secondsLeft = 0;
-let sessionLeft = DEFAULT_SESSION_SECONDS;
 let running = false;
 let timer = null;
 let nextAfterPause = null;
@@ -179,6 +208,12 @@ let audioCtx = null;
 let activeRun = null;
 let historyRecords = loadHistoryRecords();
 let displayedMonth = startOfMonth(new Date());
+let appSettings = {
+  sessionSeconds: DEFAULT_SESSION_SECONDS,
+  dailyGoalSeconds: DEFAULT_DAILY_GOAL_SECONDS,
+  updatedAt: null
+};
+let sessionLeft = DEFAULT_SESSION_SECONDS;
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -259,6 +294,89 @@ function getSettingsSnapshot() {
   };
 }
 
+function getSessionDurationSeconds() {
+  return appSettings.sessionSeconds;
+}
+
+function getDailyGoalSeconds() {
+  return appSettings.dailyGoalSeconds;
+}
+
+function isSessionDurationEditable() {
+  return !running;
+}
+
+function parseDurationInput(input, fallbackSeconds) {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const mmssMatch = trimmed.match(/^(\d{1,3}):(\d{1,2})$/);
+  if (mmssMatch) {
+    const minutes = Number(mmssMatch[1]);
+    const seconds = Number(mmssMatch[2]);
+    if (seconds >= 60) return null;
+    const totalSeconds = (minutes * 60) + seconds;
+    return totalSeconds > 0 ? totalSeconds : fallbackSeconds;
+  }
+  const minuteValue = Number(trimmed);
+  if (!Number.isFinite(minuteValue) || minuteValue <= 0) {
+    return null;
+  }
+  return Math.round(minuteValue * 60);
+}
+
+function updateTimeLeftEditState() {
+  timeLeftEl.classList.toggle('is-editable', isSessionDurationEditable());
+  timeLeftEl.title = isSessionDurationEditable() ? '双击修改时长（支持分钟或 MM:SS）' : '';
+}
+
+function getSettingsData(updatedAt = appSettings.updatedAt || new Date().toISOString()) {
+  return {
+    ...getSettingsSnapshot(),
+    sessionSeconds: getSessionDurationSeconds(),
+    dailyGoalSeconds: getDailyGoalSeconds(),
+    updatedAt
+  };
+}
+
+function applySettingsData(data) {
+  if (!data || typeof data !== 'object') return;
+  if (typeof data.inhale === 'number') inhaleRange.value = String(data.inhale);
+  if (typeof data.exhale === 'number') exhaleRange.value = String(data.exhale);
+  if (typeof data.pause === 'number') pauseRange.value = String(data.pause);
+  if (typeof data.sessionSeconds === 'number' && data.sessionSeconds > 0) {
+    appSettings.sessionSeconds = Math.round(data.sessionSeconds);
+  }
+  if (typeof data.dailyGoalSeconds === 'number' && data.dailyGoalSeconds > 0) {
+    appSettings.dailyGoalSeconds = Math.round(data.dailyGoalSeconds);
+  }
+  if (typeof data.updatedAt === 'string') {
+    appSettings.updatedAt = data.updatedAt;
+  }
+  inhaleVal.textContent = inhaleRange.value;
+  exhaleVal.textContent = exhaleRange.value;
+  pauseVal.textContent = pauseRange.value;
+  if (!running) {
+    sessionLeft = getSessionDurationSeconds();
+    remainingEl.textContent = formatTime(sessionLeft);
+    if (phase === 'inhale') label.textContent = '吸' + inhaleRange.value;
+    if (phase === 'exhale') label.textContent = '呼' + exhaleRange.value;
+    if (phase === 'pause') label.textContent = '停' + pauseRange.value;
+  }
+}
+
+function getTimestampValue(value) {
+  if (typeof value !== 'string') return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function setBreathVisualScale(circleScale, waveScale = circleScale + 0.08) {
+  circle.style.transform = `scale(${circleScale})`;
+  wavePath.style.transform = `scale(${waveScale})`;
+  particleRing.style.transform = `scale(${waveScale + 0.03})`;
+}
+
 function setSyncStatus(message, tone = '') {
   syncStatus.textContent = message;
   if (tone) {
@@ -281,12 +399,16 @@ function refreshSyncStatus() {
   setSyncStatus('云同步已启用，等待首次同步。', 'info');
 }
 
-function saveSettings() {
-  const data = getSettingsSnapshot();
+function saveSettings(sync = false) {
+  const data = getSettingsData(new Date().toISOString());
+  appSettings.updatedAt = data.updatedAt;
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Save settings failed:', error);
+  }
+  if (sync) {
+    void syncSettingsToCloud();
   }
 }
 
@@ -294,17 +416,11 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
-      const data = JSON.parse(raw);
-      if (typeof data.inhale === 'number') inhaleRange.value = String(data.inhale);
-      if (typeof data.exhale === 'number') exhaleRange.value = String(data.exhale);
-      if (typeof data.pause === 'number') pauseRange.value = String(data.pause);
+      applySettingsData(JSON.parse(raw));
     }
   } catch (error) {
     console.error('Load settings failed:', error);
   }
-  inhaleVal.textContent = inhaleRange.value;
-  exhaleVal.textContent = exhaleRange.value;
-  pauseVal.textContent = pauseRange.value;
 }
 
 function normalizeRecord(record) {
@@ -385,6 +501,60 @@ async function syncHistoryToCloud() {
   }
 }
 
+async function syncSettingsToCloud() {
+  if (!r2Sync.config.enabled) {
+    refreshSyncStatus();
+    return false;
+  }
+  const data = getSettingsData();
+  const ok = await r2Sync.syncToR2(data, SETTINGS_ENTITY);
+  if (ok) {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Persist synced settings failed:', error);
+    }
+  }
+  return ok;
+}
+
+async function hydrateSettingsFromCloud() {
+  if (!r2Sync.config.enabled) {
+    return false;
+  }
+  const result = await r2Sync.loadFromR2(SETTINGS_ENTITY);
+  if (!result || result.reason === 'not_found') {
+    if (appSettings.updatedAt) {
+      await syncSettingsToCloud();
+    }
+    return false;
+  }
+  if (!result.ok || !result.data || typeof result.data !== 'object' || Array.isArray(result.data)) {
+    return false;
+  }
+  const remoteSettings = result.data;
+  const localTimestamp = getTimestampValue(appSettings.updatedAt);
+  const remoteTimestamp = getTimestampValue(remoteSettings.updatedAt);
+
+  if (remoteTimestamp > localTimestamp) {
+    applySettingsData(remoteSettings);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(getSettingsData(appSettings.updatedAt || remoteSettings.updatedAt)));
+    } catch (error) {
+      console.error('Persist cloud settings failed:', error);
+    }
+    renderCalendar();
+    return true;
+  }
+
+  if (localTimestamp > remoteTimestamp) {
+    await syncSettingsToCloud();
+    return true;
+  }
+
+  return false;
+}
+
 async function hydrateHistoryFromCloud() {
   if (!r2Sync.config.enabled) {
     refreshSyncStatus();
@@ -452,15 +622,13 @@ function renderCalendar() {
   const today = new Date();
   const todayKey = getDateKey(today);
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const monthRecords = historyRecords.filter((record) => {
-    const date = new Date(record.startedAt);
-    return date.getFullYear() === year && date.getMonth() === month;
-  });
-  const monthCount = monthRecords.length;
-  const monthDurationSec = monthRecords.reduce((total, record) => total + record.durationSec, 0);
+  const visibleCurrentMonthKeys = new Set();
+  const goalSeconds = getDailyGoalSeconds();
+  let monthCount = 0;
+  let monthDurationSec = 0;
 
   monthTitleBtn.textContent = formatMonthTitle(displayedMonth);
-  calendarSummary.textContent = `本月共 ${monthCount} 次呼吸练习，累计 ${formatDurationLong(monthDurationSec)}。点击年月标题可直接跳转。`;
+  calendarGoal.textContent = `每日目标：${Math.round(goalSeconds / 60)}分钟（双击修改）`;
   calendarGrid.innerHTML = '';
 
   for (let index = 0; index < 42; index += 1) {
@@ -480,8 +648,11 @@ function renderCalendar() {
     }
 
     const key = getDateKey(cellDate);
+    if (inCurrentMonth) {
+      visibleCurrentMonthKeys.add(key);
+    }
     const metric = metricsByDate[key] || { count: 0, durationSec: 0 };
-    const isGoalMet = metric.durationSec >= DAILY_GOAL_SECONDS;
+    const isGoalMet = metric.durationSec >= goalSeconds;
     const cellDateStart = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
     const isPastOrToday = cellDateStart.getTime() <= todayStart.getTime();
     const metricParts = [];
@@ -511,6 +682,14 @@ function renderCalendar() {
     `;
     calendarGrid.appendChild(cell);
   }
+
+  visibleCurrentMonthKeys.forEach((key) => {
+    const metric = metricsByDate[key];
+    if (!metric) return;
+    monthCount += metric.count;
+    monthDurationSec += metric.durationSec;
+  });
+  calendarSummary.textContent = `本月共 ${monthCount} 次呼吸练习，累计 ${formatDurationLong(monthDurationSec)}。点击年月标题可直接跳转。`;
 }
 
 function beginRunRecord() {
@@ -578,6 +757,9 @@ function startPhase(name) {
     secondsLeft = getPause();
     circle.classList.remove('vibrating');
     circle.style.transitionDuration = '0s';
+    wavePath.style.transitionDuration = '0s';
+    particleRing.style.transitionDuration = '0s';
+    setBreathVisualScale(0.78, 0.9);
     label.textContent = '停' + secondsLeft;
     if (running) playPhaseTone('pause');
     return;
@@ -585,7 +767,9 @@ function startPhase(name) {
   secondsLeft = name === 'inhale' ? getInhale() : getExhale();
   circle.classList.add('vibrating');
   circle.style.transitionDuration = secondsLeft + 's';
-  circle.style.transform = name === 'inhale' ? 'scale(1)' : 'scale(0.7)';
+  wavePath.style.transitionDuration = secondsLeft + 's';
+  particleRing.style.transitionDuration = secondsLeft + 's';
+  setBreathVisualScale(name === 'inhale' ? 1 : 0.72, name === 'inhale' ? 1.08 : 0.9);
   label.textContent = (name === 'inhale' ? '吸' : '呼') + secondsLeft;
   if (running) playPhaseTone(name);
 }
@@ -619,7 +803,7 @@ function tick() {
 function start() {
   if (running) return;
   if (sessionLeft <= 0) {
-    sessionLeft = DEFAULT_SESSION_SECONDS;
+    sessionLeft = getSessionDurationSeconds();
     remainingEl.textContent = formatTime(sessionLeft);
   }
   if (secondsLeft <= 0) {
@@ -628,6 +812,8 @@ function start() {
   beginRunRecord();
   running = true;
   toggleBtn.textContent = '结束';
+  updateTimeLeftEditState();
+  renderCalendar();
   ensureAudio();
   timer = window.setInterval(tick, 1000);
 
@@ -650,6 +836,8 @@ function stop(reason = 'stop') {
   }
   circle.classList.remove('vibrating');
   finalizeRunRecord(reason);
+  updateTimeLeftEditState();
+  renderCalendar();
 
   if (typeof gtag === 'function') {
     gtag('event', 'stop_practice', {
@@ -662,7 +850,9 @@ function finish() {
   stop('finish');
   label.textContent = '完成';
   circle.style.transitionDuration = '0.5s';
-  circle.style.transform = 'scale(1)';
+  wavePath.style.transitionDuration = '0.5s';
+  particleRing.style.transitionDuration = '0.5s';
+  setBreathVisualScale(1, 1.08);
   remainingEl.textContent = '00:00';
   circle.classList.remove('vibrating');
 
@@ -673,21 +863,23 @@ function finish() {
 
 function generateWaves() {
   const path = document.getElementById('wavePath');
-  const size = 352;
+  const particleRing = document.getElementById('particleRing');
+  const size = 360;
   const centerX = size / 2;
   const centerY = size / 2;
-  const baseRadius = size / 2;
-  const maxWaveHeight = 24;
+  const baseRadius = 144;
+  const maxWaveHeight = 8;
   const segments = 24;
   const points = [];
 
   for (let index = 0; index < segments; index += 1) {
     const angle = (index / segments) * Math.PI * 2;
-    const sineValue = Math.sin(angle * 6);
-    const normalizedSine = (sineValue + 1) / 2;
-    const radius = baseRadius - normalizedSine * maxWaveHeight;
+    const waveOffset = (Math.cos(angle * 4) * maxWaveHeight) + (Math.cos(angle * 8) * 3.2);
+    const radius = baseRadius + waveOffset;
 
     points.push({
+      angle,
+      radius,
       x: centerX + Math.cos(angle) * radius,
       y: centerY + Math.sin(angle) * radius
     });
@@ -711,6 +903,25 @@ function generateWaves() {
   }
 
   path.setAttribute('d', d);
+  particleRing.innerHTML = '';
+  const particleLayers = [
+    { radius: 136, count: 8, size: 4.2, opacity: 0.78, delayStep: 0.14 },
+    { radius: 150, count: 12, size: 3.2, opacity: 0.62, delayStep: 0.11 },
+    { radius: 164, count: 16, size: 2.2, opacity: 0.46, delayStep: 0.08 }
+  ];
+
+  particleLayers.forEach((layer, layerIndex) => {
+    for (let index = 0; index < layer.count; index += 1) {
+      const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      const angle = (index / layer.count) * Math.PI * 2 + (layerIndex * Math.PI / layer.count);
+      particle.setAttribute('cx', String(centerX + Math.cos(angle) * layer.radius));
+      particle.setAttribute('cy', String(centerY + Math.sin(angle) * layer.radius));
+      particle.setAttribute('r', String(layer.size));
+      particle.style.animationDelay = `${(index + (layerIndex * 2)) * layer.delayStep}s`;
+      particle.style.opacity = String(layer.opacity);
+      particleRing.appendChild(particle);
+    }
+  });
 }
 
 function trackSettingChange(setting, value) {
@@ -740,6 +951,34 @@ function jumpToMonth() {
   renderCalendar();
 }
 
+function editSessionDuration() {
+  if (!isSessionDurationEditable()) return;
+  const input = window.prompt('请输入练习时长，支持分钟或 MM:SS', formatTime(Math.max(sessionLeft, getSessionDurationSeconds())));
+  if (!input) return;
+  const parsedSeconds = parseDurationInput(input, getSessionDurationSeconds());
+  if (!parsedSeconds) {
+    window.alert('请输入正确时长，例如 10 或 10:30');
+    return;
+  }
+  appSettings.sessionSeconds = parsedSeconds;
+  sessionLeft = parsedSeconds;
+  remainingEl.textContent = formatTime(sessionLeft);
+  saveSettings(true);
+}
+
+function editDailyGoal() {
+  const input = window.prompt('请输入每日目标分钟数', String(Math.round(getDailyGoalSeconds() / 60)));
+  if (!input) return;
+  const minutes = Number(input.trim());
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    window.alert('请输入正确的分钟数，例如 10');
+    return;
+  }
+  appSettings.dailyGoalSeconds = Math.round(minutes * 60);
+  saveSettings(true);
+  renderCalendar();
+}
+
 toggleBtn.addEventListener('click', () => {
   if (!running) {
     start();
@@ -750,7 +989,9 @@ toggleBtn.addEventListener('click', () => {
 
 configBtn.addEventListener('click', () => {
   r2Sync.createConfigDialog(async () => {
+    await hydrateSettingsFromCloud();
     const mergedFromCloud = await hydrateHistoryFromCloud();
+    await syncSettingsToCloud();
     if (historyRecords.length > 0 || mergedFromCloud) {
       await syncHistoryToCloud();
     } else {
@@ -770,6 +1011,8 @@ nextMonthBtn.addEventListener('click', () => {
 });
 
 monthTitleBtn.addEventListener('click', jumpToMonth);
+timeLeftEl.addEventListener('dblclick', editSessionDuration);
+calendarGoal.addEventListener('dblclick', editDailyGoal);
 
 inhaleRange.addEventListener('input', () => {
   inhaleVal.textContent = inhaleRange.value;
@@ -795,17 +1038,29 @@ pauseRange.addEventListener('input', () => {
   }
 });
 
-inhaleRange.addEventListener('change', () => trackSettingChange('inhale', getInhale()));
-exhaleRange.addEventListener('change', () => trackSettingChange('exhale', getExhale()));
-pauseRange.addEventListener('change', () => trackSettingChange('pause', getPause()));
+inhaleRange.addEventListener('change', () => {
+  saveSettings(true);
+  trackSettingChange('inhale', getInhale());
+});
+exhaleRange.addEventListener('change', () => {
+  saveSettings(true);
+  trackSettingChange('exhale', getExhale());
+});
+pauseRange.addEventListener('change', () => {
+  saveSettings(true);
+  trackSettingChange('pause', getPause());
+});
 
 async function init() {
   loadSettings();
   remainingEl.textContent = formatTime(sessionLeft);
   label.textContent = '吸' + inhaleRange.value;
   generateWaves();
+  setBreathVisualScale(0.72, 0.9);
+  updateTimeLeftEditState();
   renderCalendar();
   refreshSyncStatus();
+  await hydrateSettingsFromCloud();
   const mergedFromCloud = await hydrateHistoryFromCloud();
   if (mergedFromCloud && historyRecords.length > 0) {
     await syncHistoryToCloud();
