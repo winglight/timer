@@ -1,0 +1,8 @@
+[     589ms] ReferenceError: path is not defined
+    at generateWaves (http://localhost:8123/index.html:898:3)
+    at init (http://localhost:8123/index.html:1053:3)
+    at http://localhost:8123/index.html:1065:6
+[   75241ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://www.googletagmanager.com/gtag/js?id=G-B82Q8E53ZL:0
+[   75327ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8123/favicon.ico:0
+[  115879ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8123/favicon.ico:0
+[  207306ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8123/favicon.ico:0

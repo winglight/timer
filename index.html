@@ -29,14 +29,15 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .time-left.is-editable { cursor: pointer; }
 .wrap { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 360px; }
 .breath-visual { position: relative; width: 360px; height: 360px; display: flex; align-items: center; justify-content: center; }
-.circle { position: absolute; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #b8e4f8 0%, #a7d8f0 52%, #94cbe8 100%); display: flex; align-items: center; justify-content: center; transform: scale(0.72); transform-origin: center; transition: transform 4s ease-in-out, box-shadow 0.8s ease; will-change: transform; box-shadow: 0 16px 40px rgba(120, 182, 220, 0.34); z-index: 2; }
+.breath-shell { position: absolute; inset: 0; transform: scale(0.72); transform-origin: center; transition: transform 4s ease-in-out; will-change: transform; }
+.circle { position: absolute; inset: 60px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #b8e4f8 0%, #a7d8f0 52%, #94cbe8 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 16px 40px rgba(120, 182, 220, 0.34); z-index: 2; }
 .wave-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
-.wave-core { fill: rgba(149, 206, 236, 0.34); transform-origin: 180px 180px; transition: transform 4s ease-in-out, opacity 0.8s ease; }
-.particle-ring { transform-origin: 180px 180px; transition: transform 4s ease-in-out, opacity 0.8s ease; }
-.particle-ring circle { fill: rgba(144, 201, 233, 0.72); }
-.circle.vibrating ~ .wave-svg .wave-core { animation: waveFloat 4.8s ease-in-out infinite; opacity: 0.95; }
-.circle.vibrating ~ .wave-svg .particle-ring { animation: ringPulse 3.6s ease-in-out infinite; opacity: 1; }
-.circle.vibrating ~ .wave-svg .particle-ring circle { animation: particleDrift 3.2s ease-in-out infinite; }
+.wave-core { fill: rgba(149, 206, 236, 0.3); opacity: 0.6; transition: opacity 0.8s ease; }
+.particle-ring { opacity: 0.72; transition: opacity 0.8s ease; }
+.particle-ring circle { fill: rgba(144, 201, 233, var(--particle-alpha, 0.64)); }
+.breath-shell.is-animating .wave-core { animation: waveFloat 4.8s ease-in-out infinite; opacity: 0.88; }
+.breath-shell.is-animating .particle-ring { animation: ringPulse 3.6s ease-in-out infinite; opacity: 0.96; }
+.breath-shell.is-animating .particle-ring circle { animation: particleFlicker 2.8s ease-in-out infinite; }
 .label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
 .calendar-section { width: min(100%, 480px); background: rgba(255, 255, 255, 0.92); border-radius: 14px; box-shadow: 0 8px 20px rgba(15, 76, 129, 0.08); padding: 10px; box-sizing: border-box; }
 .calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -72,9 +73,9 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   50%  { transform: scale(1.02); opacity: 0.76; }
   100% { transform: scale(0.99); opacity: 0.48; }
 }
-@keyframes particleDrift {
-  0%, 100% { transform: scale(1); opacity: 0.74; }
-  50% { transform: scale(1.24); opacity: 1; }
+@keyframes particleFlicker {
+  0%, 100% { opacity: calc(var(--particle-alpha, 0.64) * 0.82); }
+  50% { opacity: calc(var(--particle-alpha, 0.64) * 1.12); }
 }
 @media (max-width: 768px) {
   .page { width: calc(100% - 24px); padding-top: 16px; }
@@ -83,7 +84,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .controls input[type="range"] { width: 120px; }
   .time-left { font-size: 28px; }
   .breath-visual { width: 320px; height: 320px; }
-  .circle { width: 220px; height: 220px; }
+  .circle { inset: 54px; }
   .calendar-section { width: min(100%, 420px); padding: 9px; }
   .month-title-btn { font-size: 15px; }
 }
@@ -94,7 +95,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .calendar-section { width: 100%; }
   .wrap { min-height: 320px; }
   .breath-visual { width: 288px; height: 288px; }
-  .circle { width: 204px; height: 204px; }
+  .circle { inset: 48px; }
   .calendar-weekdays, .calendar-grid { gap: 3px; }
   .calendar-cell { padding: 4px; }
   .date-number { font-size: 13px; }
@@ -126,13 +127,15 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 
   <div class="wrap">
     <div class="breath-visual">
-      <div id="circle" class="circle">
-        <div id="label" class="label"></div>
+      <div id="breathShell" class="breath-shell">
+        <div id="circle" class="circle">
+          <div id="label" class="label"></div>
+        </div>
+        <svg class="wave-svg" viewBox="0 0 360 360" aria-hidden="true">
+          <path id="wavePath" class="wave-core" d=""></path>
+          <g id="particleRing" class="particle-ring"></g>
+        </svg>
       </div>
-      <svg class="wave-svg" viewBox="0 0 360 360" aria-hidden="true">
-        <path id="wavePath" class="wave-core" d=""></path>
-        <g id="particleRing" class="particle-ring"></g>
-      </svg>
     </div>
   </div>
 
@@ -194,6 +197,7 @@ const calendarGrid = document.getElementById('calendarGrid');
 const calendarGoal = document.getElementById('calendarGoal');
 const calendarSummary = document.getElementById('calendarSummary');
 const syncStatus = document.getElementById('syncStatus');
+const breathShell = document.getElementById('breathShell');
 const wavePath = document.getElementById('wavePath');
 const particleRing = document.getElementById('particleRing');
 
@@ -371,10 +375,8 @@ function getTimestampValue(value) {
   return Number.isFinite(time) ? time : 0;
 }
 
-function setBreathVisualScale(circleScale, waveScale = circleScale + 0.08) {
-  circle.style.transform = `scale(${circleScale})`;
-  wavePath.style.transform = `scale(${waveScale})`;
-  particleRing.style.transform = `scale(${waveScale + 0.03})`;
+function setBreathVisualScale(scale) {
+  breathShell.style.transform = `scale(${scale})`;
 }
 
 function setSyncStatus(message, tone = '') {
@@ -755,21 +757,17 @@ function startPhase(name) {
   phase = name;
   if (name === 'pause') {
     secondsLeft = getPause();
-    circle.classList.remove('vibrating');
-    circle.style.transitionDuration = '0s';
-    wavePath.style.transitionDuration = '0s';
-    particleRing.style.transitionDuration = '0s';
-    setBreathVisualScale(0.78, 0.9);
+    breathShell.classList.remove('is-animating');
+    breathShell.style.transitionDuration = '0s';
+    setBreathVisualScale(0.78);
     label.textContent = '停' + secondsLeft;
     if (running) playPhaseTone('pause');
     return;
   }
   secondsLeft = name === 'inhale' ? getInhale() : getExhale();
-  circle.classList.add('vibrating');
-  circle.style.transitionDuration = secondsLeft + 's';
-  wavePath.style.transitionDuration = secondsLeft + 's';
-  particleRing.style.transitionDuration = secondsLeft + 's';
-  setBreathVisualScale(name === 'inhale' ? 1 : 0.72, name === 'inhale' ? 1.08 : 0.9);
+  breathShell.classList.add('is-animating');
+  breathShell.style.transitionDuration = secondsLeft + 's';
+  setBreathVisualScale(name === 'inhale' ? 1 : 0.72);
   label.textContent = (name === 'inhale' ? '吸' : '呼') + secondsLeft;
   if (running) playPhaseTone(name);
 }
@@ -834,7 +832,7 @@ function stop(reason = 'stop') {
     clearInterval(timer);
     timer = null;
   }
-  circle.classList.remove('vibrating');
+  breathShell.classList.remove('is-animating');
   finalizeRunRecord(reason);
   updateTimeLeftEditState();
   renderCalendar();
@@ -849,12 +847,9 @@ function stop(reason = 'stop') {
 function finish() {
   stop('finish');
   label.textContent = '完成';
-  circle.style.transitionDuration = '0.5s';
-  wavePath.style.transitionDuration = '0.5s';
-  particleRing.style.transitionDuration = '0.5s';
-  setBreathVisualScale(1, 1.08);
+  breathShell.style.transitionDuration = '0.5s';
+  setBreathVisualScale(1);
   remainingEl.textContent = '00:00';
-  circle.classList.remove('vibrating');
 
   if (typeof gtag === 'function') {
     gtag('event', 'complete_practice');
@@ -862,19 +857,17 @@ function finish() {
 }
 
 function generateWaves() {
-  const path = document.getElementById('wavePath');
-  const particleRing = document.getElementById('particleRing');
   const size = 360;
   const centerX = size / 2;
   const centerY = size / 2;
-  const baseRadius = 144;
-  const maxWaveHeight = 8;
-  const segments = 24;
+  const baseRadius = 146;
+  const maxWaveHeight = 6;
+  const segments = 48;
   const points = [];
 
   for (let index = 0; index < segments; index += 1) {
     const angle = (index / segments) * Math.PI * 2;
-    const waveOffset = (Math.cos(angle * 4) * maxWaveHeight) + (Math.cos(angle * 8) * 3.2);
+    const waveOffset = (Math.cos(angle * 4) * maxWaveHeight) + (Math.cos(angle * 8) * 2);
     const radius = baseRadius + waveOffset;
 
     points.push({
@@ -902,23 +895,25 @@ function generateWaves() {
     d += ` Q ${controlPoint.x} ${controlPoint.y}, ${destination.x} ${destination.y}`;
   }
 
-  path.setAttribute('d', d);
+  wavePath.setAttribute('d', d);
   particleRing.innerHTML = '';
   const particleLayers = [
-    { radius: 136, count: 8, size: 4.2, opacity: 0.78, delayStep: 0.14 },
-    { radius: 150, count: 12, size: 3.2, opacity: 0.62, delayStep: 0.11 },
-    { radius: 164, count: 16, size: 2.2, opacity: 0.46, delayStep: 0.08 }
+    { radius: 130, count: 24, size: 4.4, opacity: 0.78, delayStep: 0.09, offset: 0 },
+    { radius: 140, count: 30, size: 3.5, opacity: 0.66, delayStep: 0.075, offset: 0.14 },
+    { radius: 150, count: 36, size: 2.7, opacity: 0.52, delayStep: 0.06, offset: 0.08 },
+    { radius: 158, count: 42, size: 2.1, opacity: 0.38, delayStep: 0.05, offset: 0.2 }
   ];
 
   particleLayers.forEach((layer, layerIndex) => {
     for (let index = 0; index < layer.count; index += 1) {
       const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      const angle = (index / layer.count) * Math.PI * 2 + (layerIndex * Math.PI / layer.count);
-      particle.setAttribute('cx', String(centerX + Math.cos(angle) * layer.radius));
-      particle.setAttribute('cy', String(centerY + Math.sin(angle) * layer.radius));
+      const angle = ((index / layer.count) * Math.PI * 2) + layer.offset;
+      const wobble = Math.cos(angle * 4) * (layerIndex * 0.45);
+      particle.setAttribute('cx', String(centerX + Math.cos(angle) * (layer.radius + wobble)));
+      particle.setAttribute('cy', String(centerY + Math.sin(angle) * (layer.radius + wobble)));
       particle.setAttribute('r', String(layer.size));
+      particle.style.setProperty('--particle-alpha', String(layer.opacity));
       particle.style.animationDelay = `${(index + (layerIndex * 2)) * layer.delayStep}s`;
-      particle.style.opacity = String(layer.opacity);
       particleRing.appendChild(particle);
     }
   });
@@ -1056,7 +1051,7 @@ async function init() {
   remainingEl.textContent = formatTime(sessionLeft);
   label.textContent = '吸' + inhaleRange.value;
   generateWaves();
-  setBreathVisualScale(0.72, 0.9);
+  setBreathVisualScale(0.72);
   updateTimeLeftEditState();
   renderCalendar();
   refreshSyncStatus();

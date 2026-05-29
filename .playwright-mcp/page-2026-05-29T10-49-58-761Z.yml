@@ -1,0 +1,37 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - text: 吸时长
+      - slider "吸时长 4 s" [ref=e6]: "4"
+      - generic [ref=e7]: "4"
+      - text: s
+    - generic [ref=e8]:
+      - text: 呼时长
+      - slider "呼时长 6 s" [ref=e9]: "6"
+      - generic [ref=e10]: "6"
+      - text: s
+    - generic [ref=e11]:
+      - text: 暂停时长
+      - slider "暂停时长 0 s" [ref=e12]: "0"
+      - generic [ref=e13]: "0"
+      - text: s
+    - button "开始" [ref=e14] [cursor=pointer]
+  - generic [ref=e15]: 剩余时间：10:00
+  - generic [ref=e18]:
+    - generic [ref=e20]: 吸4
+    - img
+  - generic [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - button "上一个月" [ref=e24] [cursor=pointer]: ◀
+        - button "点击跳转到指定年月" [ref=e25] [cursor=pointer]
+        - button "下一个月" [ref=e26] [cursor=pointer]: ▶
+      - button "Config" [ref=e28] [cursor=pointer]
+    - generic [ref=e30]:
+      - generic [ref=e31]: 日
+      - generic [ref=e32]: 一
+      - generic [ref=e33]: 二
+      - generic [ref=e34]: 三
+      - generic [ref=e35]: 四
+      - generic [ref=e36]: 五
+      - generic [ref=e37]: 六
