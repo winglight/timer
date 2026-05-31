@@ -205,6 +205,7 @@ const r2Sync = new R2Sync();
 
 let phase = 'inhale';
 let secondsLeft = 0;
+let currentVisualScale = 0.72;
 let running = false;
 let timer = null;
 let nextAfterPause = null;
@@ -376,6 +377,7 @@ function getTimestampValue(value) {
 }
 
 function setBreathVisualScale(scale) {
+  currentVisualScale = scale;
   breathShell.style.transform = `scale(${scale})`;
 }
 
@@ -759,7 +761,7 @@ function startPhase(name) {
     secondsLeft = getPause();
     breathShell.classList.remove('is-animating');
     breathShell.style.transitionDuration = '0s';
-    setBreathVisualScale(0.78);
+    breathShell.style.transform = `scale(${currentVisualScale})`;
     label.textContent = '停' + secondsLeft;
     if (running) playPhaseTone('pause');
     return;
