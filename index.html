@@ -38,6 +38,10 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .breath-shell.is-animating .wave-core { animation: waveFloat 4.8s ease-in-out infinite; opacity: 0.88; }
 .breath-shell.is-animating .particle-ring { animation: ringPulse 3.6s ease-in-out infinite; opacity: 0.96; }
 .breath-shell.is-animating .particle-ring circle { animation: particleFlicker 2.8s ease-in-out infinite; }
+.breath-shell.is-paused,
+.breath-shell.is-paused .wave-core,
+.breath-shell.is-paused .particle-ring,
+.breath-shell.is-paused .particle-ring circle { animation-play-state: paused; }
 .label { font-size: 32px; color: #0f4c81; letter-spacing: 1px; }
 .calendar-section { width: min(100%, 480px); background: rgba(255, 255, 255, 0.92); border-radius: 14px; box-shadow: 0 8px 20px rgba(15, 76, 129, 0.08); padding: 10px; box-sizing: border-box; }
 .calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -759,14 +763,13 @@ function startPhase(name) {
   phase = name;
   if (name === 'pause') {
     secondsLeft = getPause();
-    breathShell.classList.remove('is-animating');
-    breathShell.style.transitionDuration = '0s';
-    breathShell.style.transform = `scale(${currentVisualScale})`;
+    breathShell.classList.add('is-paused');
     label.textContent = '停' + secondsLeft;
     if (running) playPhaseTone('pause');
     return;
   }
   secondsLeft = name === 'inhale' ? getInhale() : getExhale();
+  breathShell.classList.remove('is-paused');
   breathShell.classList.add('is-animating');
   breathShell.style.transitionDuration = secondsLeft + 's';
   setBreathVisualScale(name === 'inhale' ? 1 : 0.72);
@@ -834,6 +837,7 @@ function stop(reason = 'stop') {
     clearInterval(timer);
     timer = null;
   }
+  breathShell.classList.remove('is-paused');
   breathShell.classList.remove('is-animating');
   finalizeRunRecord(reason);
   updateTimeLeftEditState();
