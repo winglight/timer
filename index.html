@@ -181,6 +181,7 @@ const HISTORY_KEY = 'breath_history';
 const LAST_SYNC_KEY = 'breath_history_last_sync';
 const HISTORY_ENTITY = 'breath-history';
 const SETTINGS_ENTITY = 'breath-settings';
+const LEGACY_HISTORY_ENTITIES = ['todos'];
 
 const circle = document.getElementById('circle');
 const label = document.getElementById('label');
@@ -215,6 +216,7 @@ let timer = null;
 let nextAfterPause = null;
 let audioCtx = null;
 let activeRun = null;
+let wakeLock = null;
 let historyRecords = loadHistoryRecords();
 let displayedMonth = startOfMonth(new Date());
 let appSettings = {
@@ -469,6 +471,22 @@ function mergeHistories(...lists) {
   });
 }
 
+async function loadHistoryFromCloud() {
+  const primaryResult = await r2Sync.loadFromR2(HISTORY_ENTITY);
+  if (primaryResult && primaryResult.ok && Array.isArray(primaryResult.data) && primaryResult.data.length > 0) {
+    return primaryResult;
+  }
+
+  for (const entity of LEGACY_HISTORY_ENTITIES) {
+    const legacyResult = await r2Sync.loadFromR2(entity);
+    if (legacyResult && legacyResult.ok && Array.isArray(legacyResult.data) && legacyResult.data.length > 0) {
+      return { ...legacyResult, migratedFrom: entity };
+    }
+  }
+
+  return primaryResult;
+}
+
 function loadHistoryRecords() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
@@ -569,7 +587,7 @@ async function hydrateHistoryFromCloud() {
     return false;
   }
   setSyncStatus('正在从云端获取记录...', 'info');
-  const result = await r2Sync.loadFromR2(HISTORY_ENTITY);
+  const result = await loadHistoryFromCloud();
 
   if (result && result.reason === 'not_found') {
     setSyncStatus('云端还没有历史文件，正在初始化...', 'info');
@@ -592,7 +610,8 @@ async function hydrateHistoryFromCloud() {
     refreshSyncStatus();
     return false;
   }
-  const remoteRecords = result.data;
+  const remoteRecords = mergeHistories(result.data);
+  const previousCount = historyRecords.length;
   const merged = mergeHistories(historyRecords, remoteRecords);
   const changed = JSON.stringify(merged) !== JSON.stringify(historyRecords);
   if (changed) {
@@ -600,7 +619,14 @@ async function hydrateHistoryFromCloud() {
   } else {
     renderCalendar();
   }
-  setSyncStatus(`已从云端更新 ${remoteRecords.length} 条记录。`, 'success');
+  const addedCount = Math.max(0, merged.length - previousCount);
+  if (result.migratedFrom) {
+    setSyncStatus(`已从旧云端文件读取 ${remoteRecords.length} 条记录，正在迁移...`, 'success');
+  } else if (remoteRecords.length === 0) {
+    setSyncStatus('云端历史文件为空，没有可更新的记录。', 'info');
+  } else {
+    setSyncStatus(`已从云端读取 ${remoteRecords.length} 条记录，合并新增 ${addedCount} 条。`, 'success');
+  }
   return changed;
 }
 
@@ -759,6 +785,29 @@ function playPhaseTone(name) {
   playBeep(name === 'pause' ? 0.4 : 1.2);
 }
 
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator) || wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+    });
+  } catch (error) {
+    console.warn('Screen wake lock request failed:', error);
+  }
+}
+
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  const lock = wakeLock;
+  wakeLock = null;
+  try {
+    await lock.release();
+  } catch (error) {
+    console.warn('Screen wake lock release failed:', error);
+  }
+}
+
 function startPhase(name) {
   phase = name;
   if (name === 'pause') {
@@ -818,6 +867,7 @@ function start() {
   updateTimeLeftEditState();
   renderCalendar();
   ensureAudio();
+  void requestWakeLock();
   timer = window.setInterval(tick, 1000);
 
   if (typeof gtag === 'function') {
@@ -832,6 +882,7 @@ function start() {
 function stop(reason = 'stop') {
   if (!running && !activeRun) return;
   running = false;
+  void releaseWakeLock();
   toggleBtn.textContent = '开始';
   if (timer) {
     clearInterval(timer);
@@ -1014,6 +1065,12 @@ nextMonthBtn.addEventListener('click', () => {
 monthTitleBtn.addEventListener('click', jumpToMonth);
 timeLeftEl.addEventListener('dblclick', editSessionDuration);
 calendarGoal.addEventListener('dblclick', editDailyGoal);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && running) {
+    void requestWakeLock();
+  }
+});
 
 inhaleRange.addEventListener('input', () => {
   inhaleVal.textContent = inhaleRange.value;

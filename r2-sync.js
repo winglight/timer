@@ -38,6 +38,12 @@ export class R2Sync {
         this.saveConfig();
     }
 
+    getObjectUrl(entity) {
+        const baseUrl = String(this.config.url || '').replace(/\/+$/, '');
+        const appPath = String(this.config.app || '').replace(/^\/+|\/+$/g, '');
+        return `${baseUrl}/${appPath}/${entity}.zip`;
+    }
+
     // 同步数据到R2
     async syncToR2(data, entity = 'todos') {
         if (!this.config.enabled) return false;
@@ -49,7 +55,7 @@ export class R2Sync {
             zip.file(entity, jsonString);
             const zipContent = await zip.generateAsync({type: "blob"});
 
-            const response = await fetch(`${this.config.url}/${this.config.app}/${entity}.zip`, {
+            const response = await fetch(this.getObjectUrl(entity), {
                 method: 'PUT',
                 headers: {
                     'X-Custom-Auth-Key': `${this.config.token}`
@@ -74,7 +80,7 @@ export class R2Sync {
         }
         
         try {
-            const response = await fetch(`${this.config.url}/${this.config.app}/${entity}.zip`, {
+            const response = await fetch(this.getObjectUrl(entity), {
                 headers: {
                     'X-Custom-Auth-Key': `${this.config.token}`
                 }
@@ -102,17 +108,20 @@ export class R2Sync {
             const zip = new JSZip();
             const contents = await zip.loadAsync(zipBlob);
             
-            // Extract files
-            const files = [];
-            for (let filename in contents.files) {
-                const content = await contents.files[filename].async("string");
-                files.push({
-                    name: filename,
-                    content: content
-                });
+            const entries = Object.values(contents.files).filter((file) => !file.dir);
+            const targetEntry = entries.find((file) => file.name === entity) || entries[0];
+            if (!targetEntry) {
+                return { ok: false, reason: 'empty_zip', data: null };
             }
-            
-            return { ok: true, reason: 'ok', data: JSON.parse(files[0].content) };
+
+            const content = await targetEntry.async("string");
+            return {
+                ok: true,
+                reason: 'ok',
+                data: JSON.parse(content),
+                entity,
+                filename: targetEntry.name
+            };
         } catch (error) {
             const isAbort = error && error.name === 'AbortError';
             console.error('Download failed:', error);
