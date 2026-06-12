@@ -181,7 +181,7 @@ const HISTORY_KEY = 'breath_history';
 const LAST_SYNC_KEY = 'breath_history_last_sync';
 const HISTORY_ENTITY = 'breath-history';
 const SETTINGS_ENTITY = 'breath-settings';
-const LEGACY_HISTORY_ENTITIES = ['todos'];
+const LEGACY_HISTORY_ENTITIES = ['breath_history', 'history', 'records', 'todos'];
 
 const circle = document.getElementById('circle');
 const label = document.getElementById('label');
@@ -382,6 +382,18 @@ function getTimestampValue(value) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function getFirstString(...values) {
+  return values.find((value) => typeof value === 'string' && value.trim());
+}
+
+function getFirstFiniteNumber(...values) {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+
 function setBreathVisualScale(scale) {
   currentVisualScale = scale;
   breathShell.style.transform = `scale(${scale})`;
@@ -435,12 +447,37 @@ function loadSettings() {
 
 function normalizeRecord(record) {
   if (!record || typeof record !== 'object') return null;
-  const startedAt = typeof record.startedAt === 'string' ? record.startedAt : null;
-  const endedAt = typeof record.endedAt === 'string' ? record.endedAt : null;
-  const durationSec = Number(record.durationSec);
-  if (!startedAt || !endedAt || !Number.isFinite(durationSec) || durationSec <= 0) {
+  const startedAt = getFirstString(
+    record.startedAt,
+    record.startTime,
+    record.started_at,
+    record.createdAt,
+    record.created_at,
+    record.date,
+    record.timestamp
+  );
+  const durationSec = getFirstFiniteNumber(
+    record.durationSec,
+    record.durationSeconds,
+    record.duration_sec,
+    record.duration,
+    record.seconds,
+    record.elapsedSeconds
+  );
+  if (!startedAt || !Number.isFinite(durationSec) || durationSec <= 0) {
     return null;
   }
+  const startedAtMs = new Date(startedAt).getTime();
+  if (!Number.isFinite(startedAtMs)) {
+    return null;
+  }
+  const endedAt = getFirstString(
+    record.endedAt,
+    record.endTime,
+    record.ended_at,
+    record.completedAt,
+    record.completed_at
+  ) || new Date(startedAtMs + (durationSec * 1000)).toISOString();
   const settings = record.settings && typeof record.settings === 'object' ? record.settings : {};
   const fallbackId = [startedAt, endedAt, durationSec, settings.inhale, settings.exhale, settings.pause].join('|');
   return {
@@ -459,6 +496,70 @@ function normalizeRecord(record) {
   };
 }
 
+function extractHistoryCandidates(payload, visited = new Set()) {
+  if (!payload || typeof payload !== 'object' || visited.has(payload)) return [];
+  visited.add(payload);
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  const datedRecords = Object.entries(payload).flatMap(([key, value]) => {
+    if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(key) || !value || typeof value !== 'object') {
+      return [];
+    }
+    const count = Math.max(1, Math.round(Number(value.count) || 1));
+    const durationSec = Number(value.durationSec ?? value.durationSeconds ?? value.duration_sec ?? value.duration);
+    if (!Number.isFinite(durationSec) || durationSec <= 0) return [];
+    const perRecordDuration = Math.max(1, Math.round(durationSec / count));
+    return Array.from({ length: count }, (_, index) => ({
+      id: `${key}#${index + 1}`,
+      startedAt: new Date(`${key}T00:00:00`).toISOString(),
+      durationSec: perRecordDuration,
+      reason: 'cloud-summary'
+    }));
+  });
+  if (datedRecords.length > 0) {
+    return datedRecords;
+  }
+
+  const preferredKeys = [
+    HISTORY_ENTITY,
+    HISTORY_KEY,
+    'historyRecords',
+    'records',
+    'history',
+    'items',
+    'data',
+    'todos'
+  ];
+  for (const key of preferredKeys) {
+    const value = payload[key];
+    if (!value) continue;
+    const candidates = extractHistoryCandidates(value, visited);
+    if (mergeHistories(candidates).length > 0) {
+      return candidates;
+    }
+  }
+
+  for (const value of Object.values(payload)) {
+    const candidates = extractHistoryCandidates(value, visited);
+    if (mergeHistories(candidates).length > 0) {
+      return candidates;
+    }
+  }
+  return [];
+}
+
+function getHistoryRecordsFromR2Result(result) {
+  if (!result || !result.ok) return [];
+  const payloads = [result.data];
+  if (Array.isArray(result.files)) {
+    result.files.forEach((file) => payloads.push(file.data));
+  }
+  return mergeHistories(payloads.flatMap((payload) => extractHistoryCandidates(payload)));
+}
+
 function mergeHistories(...lists) {
   const merged = new Map();
   lists.flat().forEach((item) => {
@@ -473,13 +574,13 @@ function mergeHistories(...lists) {
 
 async function loadHistoryFromCloud() {
   const primaryResult = await r2Sync.loadFromR2(HISTORY_ENTITY);
-  if (primaryResult && primaryResult.ok && Array.isArray(primaryResult.data) && primaryResult.data.length > 0) {
+  if (getHistoryRecordsFromR2Result(primaryResult).length > 0) {
     return primaryResult;
   }
 
   for (const entity of LEGACY_HISTORY_ENTITIES) {
     const legacyResult = await r2Sync.loadFromR2(entity);
-    if (legacyResult && legacyResult.ok && Array.isArray(legacyResult.data) && legacyResult.data.length > 0) {
+    if (getHistoryRecordsFromR2Result(legacyResult).length > 0) {
       return { ...legacyResult, migratedFrom: entity };
     }
   }
@@ -598,7 +699,7 @@ async function hydrateHistoryFromCloud() {
     return false;
   }
 
-  if (!result || !result.ok || !Array.isArray(result.data)) {
+  if (!result || !result.ok) {
     if (result && result.reason === 'timeout') {
       setSyncStatus('连接云端超时，请稍后重试。', 'error');
       return false;
@@ -610,7 +711,7 @@ async function hydrateHistoryFromCloud() {
     refreshSyncStatus();
     return false;
   }
-  const remoteRecords = mergeHistories(result.data);
+  const remoteRecords = getHistoryRecordsFromR2Result(result);
   const previousCount = historyRecords.length;
   const merged = mergeHistories(historyRecords, remoteRecords);
   const changed = JSON.stringify(merged) !== JSON.stringify(historyRecords);
@@ -623,7 +724,8 @@ async function hydrateHistoryFromCloud() {
   if (result.migratedFrom) {
     setSyncStatus(`已从旧云端文件读取 ${remoteRecords.length} 条记录，正在迁移...`, 'success');
   } else if (remoteRecords.length === 0) {
-    setSyncStatus('云端历史文件为空，没有可更新的记录。', 'info');
+    const fileNames = Array.isArray(result.files) ? result.files.map((file) => file.name).join(', ') : result.filename;
+    setSyncStatus(`已读取云端文件，但没有识别到历史记录${fileNames ? `（文件：${fileNames}）` : ''}。`, 'error');
   } else {
     setSyncStatus(`已从云端读取 ${remoteRecords.length} 条记录，合并新增 ${addedCount} 条。`, 'success');
   }

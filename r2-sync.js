@@ -114,13 +114,25 @@ export class R2Sync {
                 return { ok: false, reason: 'empty_zip', data: null };
             }
 
-            const content = await targetEntry.async("string");
+            const files = [];
+            for (const entry of entries) {
+                const content = await entry.async("string");
+                let data = null;
+                try {
+                    data = JSON.parse(content);
+                } catch (error) {
+                    console.warn(`Skipping non-JSON file in R2 zip: ${entry.name}`, error);
+                }
+                files.push({ name: entry.name, content, data });
+            }
+            const targetFile = files.find((file) => file.name === targetEntry.name);
             return {
                 ok: true,
                 reason: 'ok',
-                data: JSON.parse(content),
+                data: targetFile ? targetFile.data : null,
                 entity,
-                filename: targetEntry.name
+                filename: targetEntry.name,
+                files
             };
         } catch (error) {
             const isAbort = error && error.name === 'AbortError';
