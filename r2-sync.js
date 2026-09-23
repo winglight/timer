@@ -146,29 +146,38 @@ export class R2Sync {
     }
 
     // 创建配置对话框
-    createConfigDialog(onSave) {
+    createConfigDialog(onSave, labels = {}) {
+        const text = {
+            title: labels.title || 'R2 Configuration',
+            enable: labels.enable || 'Enable R2 sync',
+            app: labels.app || 'App',
+            url: labels.url || 'URL',
+            token: labels.token || 'Token',
+            save: labels.save || 'Save',
+            close: labels.close || 'Close'
+        };
         const configDialog = document.createElement("div");
         configDialog.className = "config-dialog";
         configDialog.innerHTML = `
-            <h2>R2 Config</h2>
+            <h2>${text.title}</h2>
             <label>
-                Enable R2 sync
+                ${text.enable}
                 <input type="checkbox" id="r2-enabled" ${this.config.enabled ? 'checked' : ''}>
             </label>
             <label>
-                App
+                ${text.app}
                 <input type="text" id="app" value="${this.config.app}">
             </label>
             <label>
-                URL
+                ${text.url}
                 <input type="text" id="url" value="${this.config.url}">
             </label>
             <label>
-                Token
+                ${text.token}
                 <input type="password" id="token" value="${this.config.token}">
             </label>
-            <button id="save-config">Save</button>
-            <button id="close-config">Close</button>
+            <button id="save-config">${text.save}</button>
+            <button id="close-config">${text.close}</button>
         `;
 
         document.body.appendChild(configDialog);

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <!-- Google tag (gtag.js) -->
@@ -12,7 +12,7 @@
   gtag('config', 'G-MEASUREMENT_ID');
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>呼吸练习 10 分钟</title>
+<title>10-Minute Breathing Exercise</title>
 <link rel="stylesheet" href="./r2-config.css">
 <style>
 html, body { min-height: 100%; margin: 0; }
@@ -67,6 +67,10 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 .date-number { position: relative; z-index: 1; font-size: 14px; font-weight: 700; line-height: 1; align-self: start; justify-self: start; color: darkgrey; }
 .calendar-metric-inline { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; align-self: stretch; justify-self: stretch; width: 100%; height: 100%; font-size: 18px; font-weight: 700; color: #0f4c81; line-height: 1; text-align: center; }
 .calendar-metric-inline.is-empty { display: none; }
+.github-link { position: fixed; right: 20px; bottom: 20px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0f4c81; color: #fff; box-shadow: 0 8px 24px rgba(15, 76, 129, 0.28); transition: transform 0.2s ease, box-shadow 0.2s ease; z-index: 10; }
+.github-link:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(15, 76, 129, 0.36); }
+.github-link:focus-visible { outline: 3px solid rgba(15, 76, 129, 0.3); outline-offset: 3px; }
+.github-link svg { width: 26px; height: 26px; fill: currentColor; }
 @keyframes ringPulse {
   0%   { transform: scale(0.98); opacity: 0.74; }
   50%  { transform: scale(1.04); opacity: 1; }
@@ -104,6 +108,7 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   .calendar-cell { padding: 4px; }
   .date-number { font-size: 13px; }
   .calendar-metric-inline { font-size: 16px; }
+  .github-link { right: 14px; bottom: 14px; width: 44px; height: 44px; }
 }
 </style>
 </head>
@@ -111,23 +116,23 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
 <main class="page">
   <section class="panel">
     <div class="controls">
-      <label>吸时长
+      <label><span data-i18n="inhaleDuration">Inhale</span>
         <input id="inhaleRange" type="range" min="1" max="20" step="1" value="4">
-        <span id="inhaleVal">4</span>s
+        <span id="inhaleVal">4</span><span data-i18n="seconds">s</span>
       </label>
-      <label>呼时长
+      <label><span data-i18n="exhaleDuration">Exhale</span>
         <input id="exhaleRange" type="range" min="1" max="30" step="1" value="6">
-        <span id="exhaleVal">6</span>s
+        <span id="exhaleVal">6</span><span data-i18n="seconds">s</span>
       </label>
-      <label>暂停时长
+      <label><span data-i18n="pauseDuration">Pause</span>
         <input id="pauseRange" type="range" min="0" max="15" step="1" value="0">
-        <span id="pauseVal">0</span>s
+        <span id="pauseVal">0</span><span data-i18n="seconds">s</span>
       </label>
-      <button id="toggleBtn" class="btn">开始</button>
+      <button id="toggleBtn" class="btn">Start</button>
     </div>
   </section>
 
-  <div id="timeLeft" class="time-left">剩余时间：<span id="remaining">10:00</span></div>
+  <div id="timeLeft" class="time-left"><span data-i18n="timeRemaining">Time remaining:</span> <span id="remaining">10:00</span></div>
 
   <div class="wrap">
     <div class="breath-visual">
@@ -146,33 +151,102 @@ body { background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%); color: #0f
   <section class="calendar-section">
     <div class="calendar-toolbar">
       <div class="calendar-nav">
-        <button id="prevMonthBtn" class="nav-btn" type="button" aria-label="上一个月">◀</button>
-        <button id="monthTitleBtn" class="month-title-btn" type="button" title="点击跳转到指定年月"></button>
-        <button id="nextMonthBtn" class="nav-btn" type="button" aria-label="下一个月">▶</button>
+        <button id="prevMonthBtn" class="nav-btn" type="button" aria-label="Previous month">◀</button>
+        <button id="monthTitleBtn" class="month-title-btn" type="button" title="Jump to a specific month"></button>
+        <button id="nextMonthBtn" class="nav-btn" type="button" aria-label="Next month">▶</button>
       </div>
       <div class="calendar-actions">
-        <button id="configBtn" class="btn btn-secondary" type="button">Config</button>
+        <button id="configBtn" class="btn btn-secondary" type="button" data-i18n="config">Config</button>
       </div>
     </div>
     <div id="calendarGoal" class="calendar-goal"></div>
     <div id="calendarSummary" class="calendar-summary"></div>
     <div id="syncStatus" class="sync-status"></div>
-    <div class="calendar-weekdays">
-      <div>日</div>
-      <div>一</div>
-      <div>二</div>
-      <div>三</div>
-      <div>四</div>
-      <div>五</div>
-      <div>六</div>
+    <div id="calendarWeekdays" class="calendar-weekdays">
+      <div>Sun</div>
+      <div>Mon</div>
+      <div>Tue</div>
+      <div>Wed</div>
+      <div>Thu</div>
+      <div>Fri</div>
+      <div>Sat</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
   </section>
 </main>
 
+<a id="githubLink" class="github-link" href="https://github.com/winglight/timer" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub" title="View source on GitHub">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.24c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.4-1.27.74-1.56-2.57-.29-5.28-1.29-5.28-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.93 10.93 0 0 1 5.76 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.71 5.38-5.29 5.67.42.36.79 1.07.79 2.16v3.2c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+</a>
+
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
 import { R2Sync } from './r2-sync.js';
+
+const browserLanguage = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
+const language = /^zh(?:[-_]|$)/i.test(browserLanguage) ? 'zh-CN' : 'en';
+const isChinese = language === 'zh-CN';
+const translations = {
+  en: {
+    pageTitle: '10-Minute Breathing Exercise', inhaleDuration: 'Inhale', exhaleDuration: 'Exhale', pauseDuration: 'Pause',
+    timeRemaining: 'Time remaining:', start: 'Start', stop: 'Stop', complete: 'Complete', inhale: 'Inhale ', exhale: 'Exhale ', pause: 'Pause ',
+    prevMonth: 'Previous month', nextMonth: 'Next month', jumpMonthTitle: 'Jump to a specific month', github: 'View source on GitHub',
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    editDurationTitle: 'Double-click to edit (minutes or MM:SS)',
+    cloudDisabled: 'Cloud sync is off. Records are saved in this browser only.', cloudEnabledLast: 'Cloud sync is on. Last sync: {time}', cloudEnabledWaiting: 'Cloud sync is on. Waiting for the first sync.',
+    syncingToCloud: 'Syncing to the cloud...', cloudSyncDone: 'Cloud sync completed: {time}', cloudSyncFailed: 'Cloud sync failed. Check your R2 configuration.',
+    loadingCloud: 'Loading records from the cloud...', cloudInitializing: 'No cloud history file yet. Initializing...', cloudInitialized: 'First sync completed and the cloud history file was created.',
+    cloudTimeout: 'Cloud connection timed out. Try again later.', cloudNetwork: 'Could not connect to the cloud. Check the address and network.',
+    legacyLoaded: 'Loaded {count} records from an old cloud file. Migrating...', cloudNoRecords: 'The cloud file was loaded, but no history records were found{files}.', cloudMerged: 'Loaded {remote} cloud records and added {added} new records.',
+    dailyGoal: 'Daily goal: {minutes} min (double-click to edit)', monthSummary: '{count} breathing sessions this month, totaling {duration}. Click the month title to jump.',
+    monthPrompt: 'Enter a month (YYYY-MM)', invalidMonthFormat: 'Use the correct format, for example: 2026-04', invalidMonth: 'The month must be between 1 and 12.',
+    durationPrompt: 'Enter a session length in minutes or MM:SS', invalidDuration: 'Enter a valid duration, for example 10 or 10:30', goalPrompt: 'Enter the daily goal in minutes', invalidGoal: 'Enter a valid number of minutes, for example 10',
+    hours: 'h', minutes: 'm', seconds: 's', fileLabel: ' (file: {files})',
+    config: 'Config', r2Title: 'R2 Configuration', r2Enable: 'Enable R2 sync',
+    r2App: 'App', r2Url: 'URL', r2Token: 'Token', save: 'Save', close: 'Close'
+  },
+  'zh-CN': {
+    pageTitle: '呼吸练习 10 分钟', inhaleDuration: '吸气时长', exhaleDuration: '呼气时长', pauseDuration: '暂停时长',
+    timeRemaining: '剩余时间：', start: '开始', stop: '结束', complete: '完成', inhale: '吸', exhale: '呼', pause: '停',
+    prevMonth: '上一个月', nextMonth: '下一个月', jumpMonthTitle: '点击跳转到指定年月', github: '在 GitHub 上查看源码',
+    weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+    editDurationTitle: '双击修改时长（支持分钟或 MM:SS）',
+    cloudDisabled: '云同步未启用，当前仅保存在本地浏览器。', cloudEnabledLast: '云同步已启用，上次同步：{time}', cloudEnabledWaiting: '云同步已启用，等待首次同步。',
+    syncingToCloud: '正在同步到云端...', cloudSyncDone: '云端同步完成：{time}', cloudSyncFailed: '云端同步失败，请检查 R2 配置。',
+    loadingCloud: '正在从云端获取记录...', cloudInitializing: '云端还没有历史文件，正在初始化...', cloudInitialized: '首次同步已完成，云端历史文件已创建。',
+    cloudTimeout: '连接云端超时，请稍后重试。', cloudNetwork: '无法连接到云端，请检查地址和网络。',
+    legacyLoaded: '已从旧云端文件读取 {count} 条记录，正在迁移...', cloudNoRecords: '已读取云端文件，但没有识别到历史记录{files}。', cloudMerged: '已从云端读取 {remote} 条记录，合并新增 {added} 条。',
+    dailyGoal: '每日目标：{minutes}分钟（双击修改）', monthSummary: '本月共 {count} 次呼吸练习，累计 {duration}。点击年月标题可直接跳转。',
+    monthPrompt: '请输入年月（YYYY-MM）', invalidMonthFormat: '请输入正确格式，例如：2026-04', invalidMonth: '月份需要在 1 到 12 之间。',
+    durationPrompt: '请输入练习时长，支持分钟或 MM:SS', invalidDuration: '请输入正确时长，例如 10 或 10:30', goalPrompt: '请输入每日目标分钟数', invalidGoal: '请输入正确的分钟数，例如 10',
+    hours: '小时', minutes: '分', seconds: '秒', fileLabel: '（文件：{files}）',
+    config: '配置', r2Title: 'R2 配置', r2Enable: '启用 R2 同步',
+    r2App: '应用名称', r2Url: '服务地址', r2Token: '访问令牌', save: '保存', close: '关闭'
+  }
+};
+
+function t(key, values = {}) {
+  return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), translations[language][key]);
+}
+
+function phaseText(name, seconds) {
+  return t(name) + seconds;
+}
+
+function applyLanguage() {
+  document.documentElement.lang = language;
+  document.title = t('pageTitle');
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  prevMonthBtn.setAttribute('aria-label', t('prevMonth'));
+  nextMonthBtn.setAttribute('aria-label', t('nextMonth'));
+  monthTitleBtn.title = t('jumpMonthTitle');
+  githubLink.setAttribute('aria-label', t('github'));
+  githubLink.title = t('github');
+  calendarWeekdays.innerHTML = translations[language].weekdays.map((day) => `<div>${day}</div>`).join('');
+  toggleBtn.textContent = running ? t('stop') : t('start');
+}
 
 const DEFAULT_SESSION_SECONDS = 600;
 const DEFAULT_DAILY_GOAL_SECONDS = 600;
@@ -205,6 +279,8 @@ const syncStatus = document.getElementById('syncStatus');
 const breathShell = document.getElementById('breathShell');
 const wavePath = document.getElementById('wavePath');
 const particleRing = document.getElementById('particleRing');
+const calendarWeekdays = document.getElementById('calendarWeekdays');
+const githubLink = document.getElementById('githubLink');
 
 const r2Sync = new R2Sync();
 
@@ -215,6 +291,14 @@ let running = false;
 let timer = null;
 let nextAfterPause = null;
 let audioCtx = null;
+let toneOscillator = null;
+let toneGain = null;
+let startRequest = 0;
+let starting = false;
+let sessionDeadline = 0;
+let phaseDeadline = 0;
+let pausedSessionMs = null;
+let pausedPhaseMs = null;
 let activeRun = null;
 let wakeLock = null;
 let historyRecords = loadHistoryRecords();
@@ -238,7 +322,7 @@ function formatTime(seconds) {
 }
 
 function formatMonthTitle(date) {
-  return `${date.getFullYear()}- ${pad(date.getMonth() + 1)}`;
+  return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'long' }).format(date);
 }
 
 function formatMonthInput(date) {
@@ -267,10 +351,10 @@ function formatDurationLong(seconds) {
   const minutes = Math.floor((safeSeconds % 3600) / 60);
   const remainingSeconds = safeSeconds % 60;
   const parts = [];
-  if (hours > 0) parts.push(`${hours}小时`);
-  if (minutes > 0 || hours > 0) parts.push(`${minutes}分`);
-  parts.push(`${remainingSeconds}秒`);
-  return parts.join('');
+  if (hours > 0) parts.push(`${hours}${t('hours')}`);
+  if (minutes > 0 || hours > 0) parts.push(`${minutes}${t('minutes')}`);
+  parts.push(`${remainingSeconds}${t('seconds')}`);
+  return parts.join(isChinese ? '' : ' ');
 }
 
 function startOfMonth(date) {
@@ -338,7 +422,7 @@ function parseDurationInput(input, fallbackSeconds) {
 
 function updateTimeLeftEditState() {
   timeLeftEl.classList.toggle('is-editable', isSessionDurationEditable());
-  timeLeftEl.title = isSessionDurationEditable() ? '双击修改时长（支持分钟或 MM:SS）' : '';
+  timeLeftEl.title = isSessionDurationEditable() ? t('editDurationTitle') : '';
 }
 
 function getSettingsData(updatedAt = appSettings.updatedAt || new Date().toISOString()) {
@@ -368,11 +452,12 @@ function applySettingsData(data) {
   exhaleVal.textContent = exhaleRange.value;
   pauseVal.textContent = pauseRange.value;
   if (!running) {
+    pausedSessionMs = null;
+    pausedPhaseMs = null;
     sessionLeft = getSessionDurationSeconds();
     remainingEl.textContent = formatTime(sessionLeft);
-    if (phase === 'inhale') label.textContent = '吸' + inhaleRange.value;
-    if (phase === 'exhale') label.textContent = '呼' + exhaleRange.value;
-    if (phase === 'pause') label.textContent = '停' + pauseRange.value;
+    const value = phase === 'inhale' ? inhaleRange.value : phase === 'exhale' ? exhaleRange.value : pauseRange.value;
+    label.textContent = phaseText(phase, value);
   }
 }
 
@@ -410,15 +495,15 @@ function setSyncStatus(message, tone = '') {
 
 function refreshSyncStatus() {
   if (!r2Sync.config.enabled) {
-    setSyncStatus('云同步未启用，当前仅保存在本地浏览器。');
+    setSyncStatus(t('cloudDisabled'));
     return;
   }
   const lastSyncedAt = localStorage.getItem(LAST_SYNC_KEY);
   if (lastSyncedAt) {
-    setSyncStatus(`云同步已启用，上次同步：${new Date(lastSyncedAt).toLocaleString()}`, 'success');
+    setSyncStatus(t('cloudEnabledLast', { time: new Date(lastSyncedAt).toLocaleString(language) }), 'success');
     return;
   }
-  setSyncStatus('云同步已启用，等待首次同步。', 'info');
+  setSyncStatus(t('cloudEnabledWaiting'), 'info');
 }
 
 function saveSettings(sync = false) {
@@ -615,15 +700,15 @@ async function syncHistoryToCloud() {
     refreshSyncStatus();
     return false;
   }
-  setSyncStatus('正在同步到云端...', 'info');
+  setSyncStatus(t('syncingToCloud'), 'info');
   const ok = await r2Sync.syncToR2(historyRecords, HISTORY_ENTITY);
   if (ok) {
     const now = new Date().toISOString();
     localStorage.setItem(LAST_SYNC_KEY, now);
-    setSyncStatus(`云端同步完成：${new Date(now).toLocaleString()}`, 'success');
+    setSyncStatus(t('cloudSyncDone', { time: new Date(now).toLocaleString(language) }), 'success');
     return true;
   } else {
-    setSyncStatus('云端同步失败，请检查 R2 配置。', 'error');
+    setSyncStatus(t('cloudSyncFailed'), 'error');
     return false;
   }
 }
@@ -687,25 +772,25 @@ async function hydrateHistoryFromCloud() {
     refreshSyncStatus();
     return false;
   }
-  setSyncStatus('正在从云端获取记录...', 'info');
+  setSyncStatus(t('loadingCloud'), 'info');
   const result = await loadHistoryFromCloud();
 
   if (result && result.reason === 'not_found') {
-    setSyncStatus('云端还没有历史文件，正在初始化...', 'info');
+    setSyncStatus(t('cloudInitializing'), 'info');
     const initialized = await syncHistoryToCloud();
     if (initialized !== false) {
-      setSyncStatus('首次同步已完成，云端历史文件已创建。', 'success');
+      setSyncStatus(t('cloudInitialized'), 'success');
     }
     return false;
   }
 
   if (!result || !result.ok) {
     if (result && result.reason === 'timeout') {
-      setSyncStatus('连接云端超时，请稍后重试。', 'error');
+      setSyncStatus(t('cloudTimeout'), 'error');
       return false;
     }
     if (result && result.reason === 'network_error') {
-      setSyncStatus('无法连接到云端，请检查地址和网络。', 'error');
+      setSyncStatus(t('cloudNetwork'), 'error');
       return false;
     }
     refreshSyncStatus();
@@ -722,12 +807,13 @@ async function hydrateHistoryFromCloud() {
   }
   const addedCount = Math.max(0, merged.length - previousCount);
   if (result.migratedFrom) {
-    setSyncStatus(`已从旧云端文件读取 ${remoteRecords.length} 条记录，正在迁移...`, 'success');
+    setSyncStatus(t('legacyLoaded', { count: remoteRecords.length }), 'success');
   } else if (remoteRecords.length === 0) {
     const fileNames = Array.isArray(result.files) ? result.files.map((file) => file.name).join(', ') : result.filename;
-    setSyncStatus(`已读取云端文件，但没有识别到历史记录${fileNames ? `（文件：${fileNames}）` : ''}。`, 'error');
+    const files = fileNames ? t('fileLabel', { files: fileNames }) : '';
+    setSyncStatus(t('cloudNoRecords', { files }), 'error');
   } else {
-    setSyncStatus(`已从云端读取 ${remoteRecords.length} 条记录，合并新增 ${addedCount} 条。`, 'success');
+    setSyncStatus(t('cloudMerged', { remote: remoteRecords.length, added: addedCount }), 'success');
   }
   return changed;
 }
@@ -764,7 +850,7 @@ function renderCalendar() {
   let monthDurationSec = 0;
 
   monthTitleBtn.textContent = formatMonthTitle(displayedMonth);
-  calendarGoal.textContent = `每日目标：${Math.round(goalSeconds / 60)}分钟（双击修改）`;
+  calendarGoal.textContent = t('dailyGoal', { minutes: Math.round(goalSeconds / 60) });
   calendarGrid.innerHTML = '';
 
   for (let index = 0; index < 42; index += 1) {
@@ -825,7 +911,10 @@ function renderCalendar() {
     monthCount += metric.count;
     monthDurationSec += metric.durationSec;
   });
-  calendarSummary.textContent = `本月共 ${monthCount} 次呼吸练习，累计 ${formatDurationLong(monthDurationSec)}。点击年月标题可直接跳转。`;
+  calendarSummary.textContent = t('monthSummary', {
+    count: monthCount,
+    duration: formatDurationLong(monthDurationSec)
+  });
 }
 
 function beginRunRecord() {
@@ -858,33 +947,40 @@ function finalizeRunRecord(reason) {
 }
 
 function ensureAudio() {
-  if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (error) {
-      console.error('Audio init failed:', error);
-    }
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    // Keep one silent oscillator and gain node for the lifetime of the page.
+    toneOscillator = audioCtx.createOscillator();
+    toneGain = audioCtx.createGain();
+    toneOscillator.type = 'sine';
+    toneOscillator.frequency.value = 600;
+    toneGain.gain.value = 0;
+    toneOscillator.connect(toneGain);
+    toneGain.connect(audioCtx.destination);
+    toneOscillator.start();
+  } catch (error) {
+    console.error('Audio init failed:', error);
   }
 }
 
-function playBeep(durationSec) {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = 600;
+function silenceTone() {
+  if (!toneGain) return;
   const now = audioCtx.currentTime;
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.06, now + 0.03);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + durationSec + 0.05);
+  toneGain.gain.cancelScheduledValues(now);
+  toneGain.gain.setValueAtTime(0, now);
 }
 
-function playPhaseTone(name) {
-  playBeep(name === 'pause' ? 0.4 : 1.2);
+function playPhaseTone(name, remainingMs) {
+  if (!toneGain || audioCtx.state !== 'running') return;
+  const duration = Math.min(name === 'pause' ? 0.4 : 1.2, remainingMs / 1000);
+  if (duration <= 0) return;
+  const now = audioCtx.currentTime;
+  silenceTone();
+  toneGain.gain.setValueAtTime(0.0001, now);
+  toneGain.gain.exponentialRampToValueAtTime(0.06, now + Math.min(0.03, duration / 2));
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  toneGain.gain.setValueAtTime(0, now + duration);
 }
 
 async function requestWakeLock() {
@@ -910,67 +1006,90 @@ async function releaseWakeLock() {
   }
 }
 
-function startPhase(name) {
-  phase = name;
-  if (name === 'pause') {
-    secondsLeft = getPause();
-    breathShell.classList.add('is-paused');
-    label.textContent = '停' + secondsLeft;
-    if (running) playPhaseTone('pause');
-    return;
-  }
-  secondsLeft = name === 'inhale' ? getInhale() : getExhale();
-  breathShell.classList.remove('is-paused');
+function phaseDuration(name) {
+  return (name === 'inhale' ? getInhale() : name === 'exhale' ? getExhale() : getPause()) * 1000;
+}
+
+function renderPhase(now, sound = false) {
+  const remainingMs = Math.max(0, phaseDeadline - now);
+  secondsLeft = Math.ceil(remainingMs / 1000);
+  label.textContent = phaseText(phase, secondsLeft);
   breathShell.classList.add('is-animating');
-  breathShell.style.transitionDuration = secondsLeft + 's';
-  setBreathVisualScale(name === 'inhale' ? 1 : 0.72);
-  label.textContent = (name === 'inhale' ? '吸' : '呼') + secondsLeft;
-  if (running) playPhaseTone(name);
+  breathShell.classList.toggle('is-paused', phase === 'pause');
+  if (phase !== 'pause') {
+    breathShell.style.transitionDuration = remainingMs / 1000 + 's';
+    setBreathVisualScale(phase === 'inhale' ? 1 : 0.72);
+  }
+  if (sound) playPhaseTone(phase, Math.min(remainingMs, sessionDeadline - now));
 }
 
 function tick() {
-  sessionLeft -= 1;
+  if (!running) return;
+  const now = performance.now();
+  sessionLeft = Math.max(0, Math.ceil((sessionDeadline - now) / 1000));
+  remainingEl.textContent = formatTime(sessionLeft);
   if (sessionLeft <= 0) {
     finish();
     return;
   }
-  remainingEl.textContent = formatTime(sessionLeft);
-  secondsLeft -= 1;
-  if (secondsLeft > 0) {
-    label.textContent = phase === 'pause' ? ('停' + secondsLeft) : ((phase === 'inhale' ? '吸' : '呼') + secondsLeft);
-    return;
+  let changed = false;
+  // Advance from the previous deadline, not the callback time. Late callbacks
+  // skip obsolete cues instead of queuing sounds or accumulating timer drift.
+  while (now >= phaseDeadline) {
+    if (phase === 'pause') {
+      phase = nextAfterPause || 'inhale';
+      nextAfterPause = null;
+    } else if (getPause() > 0) {
+      nextAfterPause = phase === 'inhale' ? 'exhale' : 'inhale';
+      phase = 'pause';
+    } else {
+      phase = phase === 'inhale' ? 'exhale' : 'inhale';
+    }
+    phaseDeadline += phaseDuration(phase);
+    changed = true;
   }
-  if (phase === 'pause') {
-    startPhase(nextAfterPause || 'inhale');
-    nextAfterPause = null;
-    return;
+  if (changed) {
+    renderPhase(now, true);
+  } else {
+    secondsLeft = Math.ceil((phaseDeadline - now) / 1000);
+    label.textContent = phaseText(phase, secondsLeft);
   }
-  const pause = getPause();
-  if (pause > 0) {
-    nextAfterPause = phase === 'inhale' ? 'exhale' : 'inhale';
-    startPhase('pause');
-    return;
-  }
-  startPhase(phase === 'inhale' ? 'exhale' : 'inhale');
 }
 
-function start() {
-  if (running) return;
+async function start() {
+  if (running || starting) return;
+  starting = true;
+  const request = ++startRequest;
+  toggleBtn.textContent = t('stop');
+  ensureAudio();
+  try {
+    // Resume inside the click gesture; do not start the clock while audio wakes up.
+    if (audioCtx && audioCtx.state !== 'running') await audioCtx.resume();
+  } catch (error) {
+    console.warn('Audio resume failed:', error);
+  }
+  if (request !== startRequest) return;
+  starting = false;
   if (sessionLeft <= 0) {
     sessionLeft = getSessionDurationSeconds();
-    remainingEl.textContent = formatTime(sessionLeft);
+    phase = 'inhale';
+    nextAfterPause = null;
+    pausedSessionMs = null;
+    pausedPhaseMs = null;
   }
-  if (secondsLeft <= 0) {
-    startPhase(phase);
-  }
+  const now = performance.now();
+  sessionDeadline = now + (pausedSessionMs ?? sessionLeft * 1000);
+  phaseDeadline = now + (pausedPhaseMs ?? phaseDuration(phase));
+  pausedSessionMs = null;
+  pausedPhaseMs = null;
   beginRunRecord();
   running = true;
-  toggleBtn.textContent = '结束';
+  renderPhase(now, true);
+  remainingEl.textContent = formatTime(sessionLeft);
   updateTimeLeftEditState();
   renderCalendar();
-  ensureAudio();
   void requestWakeLock();
-  timer = window.setInterval(tick, 1000);
+  timer = window.setInterval(tick, 50);
 
   if (typeof gtag === 'function') {
     gtag('event', 'start_practice', {
@@ -982,10 +1101,23 @@ function start() {
 }
 
 function stop(reason = 'stop') {
+  ++startRequest;
+  starting = false;
+  toggleBtn.textContent = t('start');
   if (!running && !activeRun) return;
+  const now = performance.now();
+  pausedSessionMs = Math.max(0, sessionDeadline - now);
+  pausedPhaseMs = Math.max(0, phaseDeadline - now);
+  sessionLeft = Math.ceil(pausedSessionMs / 1000);
+  remainingEl.textContent = formatTime(sessionLeft);
+  // Freeze the current scale so resuming animates only the remaining phase.
+  const transform = getComputedStyle(breathShell).transform;
+  breathShell.style.transitionDuration = '0s';
+  breathShell.style.transform = transform;
   running = false;
+  silenceTone();
   void releaseWakeLock();
-  toggleBtn.textContent = '开始';
+  toggleBtn.textContent = t('start');
   if (timer) {
     clearInterval(timer);
     timer = null;
@@ -1005,7 +1137,7 @@ function stop(reason = 'stop') {
 
 function finish() {
   stop('finish');
-  label.textContent = '完成';
+  label.textContent = t('complete');
   breathShell.style.transitionDuration = '0.5s';
   setBreathVisualScale(1);
   remainingEl.textContent = '00:00';
@@ -1088,17 +1220,17 @@ function trackSettingChange(setting, value) {
 }
 
 function jumpToMonth() {
-  const input = window.prompt('请输入年月（YYYY-MM）', formatMonthInput(displayedMonth));
+  const input = window.prompt(t('monthPrompt'), formatMonthInput(displayedMonth));
   if (!input) return;
   const match = input.trim().match(/^(\d{4})-(\d{1,2})$/);
   if (!match) {
-    window.alert('请输入正确格式，例如：2026-04');
+    window.alert(t('invalidMonthFormat'));
     return;
   }
   const year = Number(match[1]);
   const month = Number(match[2]);
   if (month < 1 || month > 12) {
-    window.alert('月份需要在 1 到 12 之间。');
+    window.alert(t('invalidMonth'));
     return;
   }
   displayedMonth = new Date(year, month - 1, 1);
@@ -1107,25 +1239,26 @@ function jumpToMonth() {
 
 function editSessionDuration() {
   if (!isSessionDurationEditable()) return;
-  const input = window.prompt('请输入练习时长，支持分钟或 MM:SS', formatTime(Math.max(sessionLeft, getSessionDurationSeconds())));
+  const input = window.prompt(t('durationPrompt'), formatTime(Math.max(sessionLeft, getSessionDurationSeconds())));
   if (!input) return;
   const parsedSeconds = parseDurationInput(input, getSessionDurationSeconds());
   if (!parsedSeconds) {
-    window.alert('请输入正确时长，例如 10 或 10:30');
+    window.alert(t('invalidDuration'));
     return;
   }
   appSettings.sessionSeconds = parsedSeconds;
+  pausedSessionMs = null;
   sessionLeft = parsedSeconds;
   remainingEl.textContent = formatTime(sessionLeft);
   saveSettings(true);
 }
 
 function editDailyGoal() {
-  const input = window.prompt('请输入每日目标分钟数', String(Math.round(getDailyGoalSeconds() / 60)));
+  const input = window.prompt(t('goalPrompt'), String(Math.round(getDailyGoalSeconds() / 60)));
   if (!input) return;
   const minutes = Number(input.trim());
   if (!Number.isFinite(minutes) || minutes <= 0) {
-    window.alert('请输入正确的分钟数，例如 10');
+    window.alert(t('invalidGoal'));
     return;
   }
   appSettings.dailyGoalSeconds = Math.round(minutes * 60);
@@ -1134,8 +1267,8 @@ function editDailyGoal() {
 }
 
 toggleBtn.addEventListener('click', () => {
-  if (!running) {
-    start();
+  if (!running && !starting) {
+    void start();
   } else {
     stop('stop');
   }
@@ -1151,6 +1284,14 @@ configBtn.addEventListener('click', () => {
     } else {
       refreshSyncStatus();
     }
+  }, {
+    title: t('r2Title'),
+    enable: t('r2Enable'),
+    app: t('r2App'),
+    url: t('r2Url'),
+    token: t('r2Token'),
+    save: t('save'),
+    close: t('close')
   });
 });
 
@@ -1170,7 +1311,8 @@ calendarGoal.addEventListener('dblclick', editDailyGoal);
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && running) {
-    void requestWakeLock();
+    tick();
+    if (running) void requestWakeLock();
   }
 });
 
@@ -1178,7 +1320,7 @@ inhaleRange.addEventListener('input', () => {
   inhaleVal.textContent = inhaleRange.value;
   saveSettings();
   if (!running && sessionLeft > 0 && phase === 'inhale') {
-    label.textContent = '吸' + inhaleRange.value;
+    label.textContent = phaseText('inhale', inhaleRange.value);
   }
 });
 
@@ -1186,7 +1328,7 @@ exhaleRange.addEventListener('input', () => {
   exhaleVal.textContent = exhaleRange.value;
   saveSettings();
   if (!running && sessionLeft > 0 && phase === 'exhale') {
-    label.textContent = '呼' + exhaleRange.value;
+    label.textContent = phaseText('exhale', exhaleRange.value);
   }
 });
 
@@ -1194,7 +1336,7 @@ pauseRange.addEventListener('input', () => {
   pauseVal.textContent = pauseRange.value;
   saveSettings();
   if (!running && sessionLeft > 0 && phase === 'pause') {
-    label.textContent = '停' + pauseRange.value;
+    label.textContent = phaseText('pause', pauseRange.value);
   }
 });
 
@@ -1212,9 +1354,11 @@ pauseRange.addEventListener('change', () => {
 });
 
 async function init() {
+  applyLanguage();
+  ensureAudio();
   loadSettings();
   remainingEl.textContent = formatTime(sessionLeft);
-  label.textContent = '吸' + inhaleRange.value;
+  label.textContent = phaseText('inhale', inhaleRange.value);
   generateWaves();
   setBreathVisualScale(0.72);
   updateTimeLeftEditState();
