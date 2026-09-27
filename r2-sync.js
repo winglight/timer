@@ -21,15 +21,23 @@ export class R2Sync {
 
     // 加载配置
     loadConfig() {
-        const stored = localStorage.getItem('r2Config');
-        if (stored) {
-            this.config = JSON.parse(stored);
+        try {
+            const stored = localStorage.getItem('r2Config');
+            if (stored) this.config = { ...this.config, ...JSON.parse(stored) };
+        } catch (error) {
+            console.warn('Could not load the saved R2 configuration:', error);
         }
     }
 
     // 保存配置
     saveConfig() {
-        localStorage.setItem('r2Config', JSON.stringify(this.config));
+        try {
+            localStorage.setItem('r2Config', JSON.stringify(this.config));
+            return true;
+        } catch (error) {
+            console.warn('Could not save the R2 configuration:', error);
+            return false;
+        }
     }
 
     // 更新配置
