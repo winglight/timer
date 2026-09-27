@@ -50,3 +50,12 @@ test('page keeps sound, R2 sync, records, export, wake lock and prototype assets
   for (const marker of ['styles.css', 'corona.js', 'app.js', 'r2-sync.js', 'jszip']) assert.ok(html.includes(marker));
   for (const marker of ['AudioContext', 'playTone', 'syncHistory', 'syncSettings', 'wakeLock', 'export-records', 'dailyGoalMinutes']) assert.ok(app.includes(marker));
 });
+
+test('Chinese and English can be switched and the preference is persisted', () => {
+  const root = path.join(__dirname, '..');
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.ok(html.includes('id="language-toggle"'));
+  for (const marker of ['breathing-language-v1', 'toggleLanguage', "language = isZh() ? 'en' : 'zh-CN'", "persist(KEYS.language, language)"]) assert.ok(app.includes(marker));
+  for (const translation of ['Practice calendar', 'Practice settings', 'Cloud sync is off.', 'No practice records yet', 'Enter a month (YYYY-MM)']) assert.ok(app.includes(translation));
+});

@@ -38,6 +38,8 @@ button svg { flex: 0 0 auto; }
 .brand svg { width: 42px; height: 36px; fill: none; stroke: #6ba8a0; stroke-width: 1.8; stroke-linecap: round; }
 h1 { margin: 0; font-size: 28px; font-weight: 500; letter-spacing: .15em; line-height: 1.4; }
 .header-actions { display: flex; gap: 14px; align-items: center; }
+.language-button { min-width: 38px; height: 34px; padding: 0 8px; border: 1px solid #dce9e3; border-radius: 18px; background: rgba(255,255,255,.66); color: #55776f; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.language-button:hover { background: #eaf4ef; color: var(--deep); }
 .remaining-group { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
 .remaining-label { color: var(--muted); font-size: 13px; letter-spacing: .05em; }
 #remaining { font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .035em; min-width: 54px; }
@@ -174,7 +176,8 @@ body.modal-open { overflow: hidden; }
   .brand { gap:9px; }
   .brand svg { width:31px; height:30px; }
   h1 { font-size:22px; letter-spacing:.1em; }
-  .header-actions { gap:7px; }
+  .header-actions { gap:6px; }
+  .language-button { min-width:34px; height:32px; padding-inline:6px; font-size:10px; }
   .header-divider { display:none; }
   .remaining-group { gap:6px; }
   .remaining-label { font-size:11px; }

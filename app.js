@@ -2,15 +2,18 @@
   'use strict';
   const { DEFAULTS, RANGES, readConfig, BreathEngine, localDateKey, dateFromKey, formatClock, smooth } = window.BreathingCore;
   const $ = id => document.getElementById(id);
-  const isChinese = /^zh(?:[-_]|$)/i.test(navigator.language || 'zh-CN');
-  const tr = (zh, en) => isChinese ? zh : en;
   const KEYS = {
     settings: 'breathing-corona-settings-v1', sessions: 'breathing-corona-sessions-v1',
-    legacySettings: 'breath_settings', legacySessions: 'breath_history', lastSync: 'breath_history_last_sync'
+    legacySettings: 'breath_settings', legacySessions: 'breath_history', lastSync: 'breath_history_last_sync',
+    language: 'breathing-language-v1'
   };
   const R2_HISTORY = 'breath-history', R2_SETTINGS = 'breath-settings';
   function load(key, fallback) { try { const value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; } catch (_) { return fallback; } }
   function persist(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_) { return false; } }
+  let language = load(KEYS.language, null);
+  if (!['zh-CN', 'en'].includes(language)) language = /^zh(?:[-_]|$)/i.test(navigator.language || 'zh-CN') ? 'zh-CN' : 'en';
+  const isZh = () => language === 'zh-CN';
+  const tr = (zh, en) => isZh() ? zh : en;
   function safeRecords(value) {
     return Array.isArray(value) ? value.filter(r => r && typeof r.id === 'string' && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && Number.isFinite(r.durationMs) && r.durationMs > 0 && r.durationMs <= 24 * 3600000 && typeof r.startedAt === 'string' && Number.isFinite(Date.parse(r.startedAt))) : [];
   }
@@ -58,25 +61,44 @@
   let lastDate = localDateKey();
   let audioContext = null, toneOscillator = null, toneGain = null, lastTonePhase = null, wakeLock = null;
   const fields = Object.keys(RANGES);
-  const phaseWords = isChinese ? { inhale: '吸气', exhale: '呼气', hold: '停留' } : { inhale: 'Inhale', exhale: 'Exhale', hold: 'Hold' };
+  const phaseWord = phase => (isZh() ? { inhale: '吸气', exhale: '呼气', hold: '停留' } : { inhale: 'Inhale', exhale: 'Exhale', hold: 'Hold' })[phase];
   function applyLanguage() {
-    if (isChinese) return;
-    document.documentElement.lang = 'en'; document.title = 'Breathing · Return to the present';
+    document.documentElement.lang = language;
+    document.title = tr('呼吸 · 回到当下', 'Breathing · Return to the present');
+    document.querySelector('meta[name="description"]').content = tr('跟随呼吸的节奏，回到当下。', 'Follow the rhythm of your breath and return to the present.');
     const text = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = value; };
-    text('.brand h1', 'Breathe'); text('.remaining-label', 'Remaining'); text('.tagline', 'Slow down · Feel · Return');
-    text('.practice-footer', 'A calmer you · One breath at a time'); text('.card-header h2', 'Practice calendar');
-    $('all-records').childNodes[0].textContent = 'View all'; text('#today-button', 'Today'); text('.overview-header h3', 'This month');
-    ['Sessions', 'Practice days', 'Minutes'].forEach((value, index) => { document.querySelectorAll('.stat-label')[index].textContent = value; });
-    ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach((value, index) => { document.querySelectorAll('.calendar-table th')[index].textContent = value; });
-    text('.card-quote p', 'Breath anchors us in the present.'); text('.card-quote footer', '— Breathe · A better self');
-    text('#settings-title', 'Practice settings');
-    ['Inhale','Exhale','Hold','Session length'].forEach((value, index) => { document.querySelectorAll('.setting-label')[index].childNodes[0].textContent = value; });
-    text('.toggle-row > span:first-child', 'Show phase countdown'); text('#cloud-title', 'R2 cloud sync');
-    document.querySelectorAll('.cloud-fields label').forEach((label, index) => { label.childNodes[0].textContent = ['App','Service URL','Access token'][index]; });
-    text('#settings-cancel', 'Cancel'); text('#settings-apply', 'Apply'); text('#end-title', 'End this practice?');
-    text('#end-cancel', 'Keep practicing'); text('#end-confirm', 'End and save'); text('#records-title', 'Practice records');
-    $('export-records').lastChild.textContent = 'Export'; text('#empty-label', 'No practice records yet');
-    $('records-start').childNodes[0].textContent = 'Start with one breath';
+    text('.brand h1', tr('呼吸', 'Breathe')); text('.remaining-label', tr('剩余', 'Remaining')); text('.tagline', tr('放慢 · 感受 · 回到当下', 'Slow down · Feel · Return'));
+    text('.practice-footer', tr('更平静的你 · 就在每一次呼吸里', 'A calmer you · One breath at a time')); text('.card-header h2', tr('练习日历', 'Practice calendar'));
+    $('all-records').childNodes[0].textContent = tr('查看全部', 'View all'); text('#today-button', tr('回到今天', 'Today')); text('.overview-header h3', tr('本月概览', 'This month'));
+    (isZh() ? ['练习次数','练习天数','总时长 / 分钟'] : ['Sessions','Practice days','Minutes']).forEach((value, index) => { document.querySelectorAll('.stat-label')[index].textContent = value; });
+    (isZh() ? ['一','二','三','四','五','六','日'] : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']).forEach((value, index) => { document.querySelectorAll('.calendar-table th')[index].textContent = value; });
+    text('.card-quote p', tr('呼吸是当下的锚，也是通往内心的桥。', 'Breath anchors us in the present and bridges us to our inner self.')); text('.card-quote footer', tr('— 呼吸 · 更好的自己', '— Breathe · A better self'));
+    text('#settings-title', tr('练习设置', 'Practice settings'));
+    (isZh() ? ['吸气','呼气','停留','练习时长'] : ['Inhale','Exhale','Hold','Session length']).forEach((value, index) => { document.querySelectorAll('.setting-label')[index].childNodes[0].textContent = value; });
+    text('#row-hold small', tr('每次呼气后', 'After each exhale'));
+    document.querySelectorAll('.stepper .unit').forEach((unit, index) => { unit.textContent = index === 3 ? tr('分钟', 'min') : tr('秒', 'sec'); });
+    text('.toggle-row > span:first-child', tr('显示阶段倒计时', 'Show phase countdown')); text('#cloud-title', tr('R2 云同步', 'R2 cloud sync'));
+    document.querySelectorAll('.cloud-fields label').forEach((label, index) => { label.childNodes[0].textContent = (isZh() ? ['应用名称','服务地址','访问令牌'] : ['App','Service URL','Access token'])[index]; });
+    text('#settings-cancel', tr('取消', 'Cancel')); text('#settings-apply', tr('应用', 'Apply')); text('#end-title', tr('结束这次练习？', 'End this practice?'));
+    text('#end-cancel', tr('继续练习', 'Keep practicing')); text('#end-confirm', tr('结束并保存', 'End and save')); text('#records-title', tr('练习记录', 'Practice records'));
+    $('export-records').lastChild.textContent = tr('导出', 'Export'); text('#empty-label', tr('还没有练习记录', 'No practice records yet'));
+    $('records-start').childNodes[0].textContent = tr('从一次呼吸开始', 'Start with one breath');
+    $('settings-open').setAttribute('aria-label', tr('练习设置', 'Practice settings')); $('settings-open').title = tr('练习设置', 'Practice settings');
+    $('remaining').setAttribute('aria-label', tr('练习剩余时间', 'Practice time remaining')); $('stage').setAttribute('aria-label', tr('呼吸引导', 'Breathing guide'));
+    $('rhythm-settings').setAttribute('aria-label', tr('修改呼吸节奏', 'Edit breathing rhythm'));
+    $('reset').setAttribute('aria-label', tr('结束或重置练习', 'End or reset practice')); $('reset').title = tr('结束 / 重置', 'End / reset');
+    $('settings-close').setAttribute('aria-label', tr('关闭设置', 'Close settings')); $('end-close').setAttribute('aria-label', tr('关闭', 'Close')); $('records-close').setAttribute('aria-label', tr('关闭练习记录', 'Close practice records'));
+    $('r2-enabled').setAttribute('aria-label', tr('启用 R2 同步', 'Enable R2 sync')); document.querySelector('.cloud-title-row label').setAttribute('aria-label', tr('启用 R2 同步', 'Enable R2 sync'));
+    document.querySelector('.practice').setAttribute('aria-label', tr('呼吸练习', 'Breathing practice')); document.querySelector('.calendar-card').setAttribute('aria-label', tr('练习日历', 'Practice calendar'));
+    document.querySelector('.calendar-table').setAttribute('aria-label', tr('月历', 'Monthly calendar')); document.querySelector('.overview').setAttribute('aria-label', tr('本月统计', 'Monthly statistics'));
+    const stepNames = isZh() ? [['缩短吸气时间','增加吸气时间'],['缩短呼气时间','增加呼气时间'],['缩短停留时间','增加停留时间'],['缩短练习时长','增加练习时长']] : [['Decrease inhale','Increase inhale'],['Decrease exhale','Increase exhale'],['Decrease hold','Increase hold'],['Decrease session length','Increase session length']];
+    document.querySelectorAll('.setting-row').forEach((row, index) => row.querySelectorAll('.stepper button').forEach((button, side) => button.setAttribute('aria-label', stepNames[index][side])));
+    $('prev-month').setAttribute('aria-label', tr('上个月', 'Previous month')); $('next-month').setAttribute('aria-label', tr('下个月', 'Next month'));
+    $('month-label').setAttribute('aria-label', tr('跳转到指定月份', 'Jump to a month')); $('month-label').title = tr('跳转到指定月份', 'Jump to a month');
+    $('daily-goal').title = tr('修改每日目标', 'Edit daily goal');
+    $('language-toggle').textContent = isZh() ? 'EN' : '中';
+    $('language-toggle').setAttribute('aria-label', tr('切换到英文', 'Switch to Chinese')); $('language-toggle').title = tr('切换到英文', 'Switch to Chinese');
+    document.querySelector('.github-link').setAttribute('aria-label', tr('在 GitHub 上查看源码', 'View source on GitHub')); document.querySelector('.github-link').title = tr('在 GitHub 上查看源码', 'View source on GitHub');
   }
   function setText(id, text) { if ($(id).textContent !== text) $(id).textContent = text; }
   function toast(text) {
@@ -94,7 +116,7 @@
   function refreshSyncStatus() {
     if (!r2.config.enabled) { setSyncStatus(tr('云同步未启用，记录仅保存在当前浏览器。', 'Cloud sync is off. Records are saved in this browser only.')); return; }
     const last = localStorage.getItem(KEYS.lastSync);
-    setSyncStatus(last ? `${tr('云同步已启用', 'Cloud sync is on')} · ${new Date(last).toLocaleString()}` : tr('云同步已启用，等待首次同步。', 'Cloud sync is on. Waiting for the first sync.'), last ? 'success' : '');
+    setSyncStatus(last ? `${tr('云同步已启用', 'Cloud sync is on')} · ${new Date(last).toLocaleString(language)}` : tr('云同步已启用，等待首次同步。', 'Cloud sync is on. Waiting for the first sync.'), last ? 'success' : '');
   }
   function extractRecords(payload, seen = new Set()) {
     if (!payload || typeof payload !== 'object' || seen.has(payload)) return [];
@@ -144,7 +166,7 @@
     const ok = await r2.syncToR2(records, R2_HISTORY);
     if (!ok) { setSyncStatus(tr('云端同步失败，请检查 R2 配置。', 'Cloud sync failed. Check the R2 configuration.'), 'error'); return false; }
     const now = new Date().toISOString(); localStorage.setItem(KEYS.lastSync, now);
-    setSyncStatus(`${tr('云端同步完成', 'Cloud sync complete')} · ${new Date(now).toLocaleString()}`, 'success');
+    setSyncStatus(`${tr('云端同步完成', 'Cloud sync complete')} · ${new Date(now).toLocaleString(language)}`, 'success');
     return true;
   }
   async function syncSettings() {
@@ -196,9 +218,9 @@
     if (lock) try { await lock.release(); } catch (_) {}
   }
   function captions() {
-    setText('inhale-caption', `${phaseWords.inhale} ${engine.config.inhale}${tr(' 秒', 's')}`);
-    setText('exhale-caption', `${phaseWords.exhale} ${engine.config.exhale}${tr(' 秒', 's')}`);
-    setText('hold-caption', `${phaseWords.hold} ${engine.config.hold}${tr(' 秒', 's')}`);
+    setText('inhale-caption', `${phaseWord('inhale')} ${engine.config.inhale}${tr(' 秒', 's')}`);
+    setText('exhale-caption', `${phaseWord('exhale')} ${engine.config.exhale}${tr(' 秒', 's')}`);
+    setText('hold-caption', `${phaseWord('hold')} ${engine.config.hold}${tr(' 秒', 's')}`);
   }
   function saveSession(completed) {
     if (!session || session.saved || engine.elapsedMs < 1000) return;
@@ -226,7 +248,7 @@
   }
   function render() {
     const frame = engine.snapshot();
-    let word = phaseWords[frame.phase];
+    let word = phaseWord(frame.phase);
     if (frame.status === 'idle') { word = tr('准备', 'Ready'); frame.level = 0; }
     else if (frame.status === 'paused') word = tr('已暂停', 'Paused');
     else if (frame.status === 'complete') { word = tr('完成', 'Complete'); frame.level = 0; }
@@ -241,7 +263,7 @@
     $('phase-seconds').hidden = !(engine.config.showCountdown && isActive);
     if (isActive) setText('phase-seconds', `${Math.max(1, Math.ceil(frame.duration * (1 - frame.progress)))}${tr(' 秒', 's')}`);
     setText('remaining', formatClock(frame.remainingMs));
-    setText('toggle-label', (isChinese ? { idle: '开始练习', running: '暂停', paused: '继续练习', complete: '再次开始' } : { idle: 'Start', running: 'Pause', paused: 'Resume', complete: 'Start again' })[frame.status]);
+    setText('toggle-label', (isZh() ? { idle: '开始练习', running: '暂停', paused: '继续练习', complete: '再次开始' } : { idle: 'Start', running: 'Pause', paused: 'Resume', complete: 'Start again' })[frame.status]);
     $('toggle-icon').setAttribute('href', frame.status === 'running' ? '#i-pause' : '#i-play');
     $('reset').disabled = frame.status === 'idle';
     document.body.dataset.status = frame.status;
@@ -309,7 +331,7 @@
       const input = $(`${key}-input`), value = input.valueAsNumber;
       if (!Number.isInteger(value) || value < min || value > max) {
         $(`row-${key}`).dataset.invalid = 'true'; input.setAttribute('aria-invalid', 'true');
-        $(`error-${key}`).hidden = false; $(`error-${key}`).textContent = `请输入 ${min}–${max} 之间的整数。`;
+        $(`error-${key}`).hidden = false; $(`error-${key}`).textContent = tr(`请输入 ${min}–${max} 之间的整数。`, `Enter an integer from ${min} to ${max}.`);
         firstInvalid = firstInvalid || input;
       } else next[key] = value;
     }
@@ -321,7 +343,7 @@
     r2.updateConfig({ enabled: $('r2-enabled').checked, app: $('r2-app').value.trim(), url: $('r2-url').value.trim(), token: $('r2-token').value });
     const saved = saveSettings();
     captions(); completeIfNeeded(); closeModal(true); render();
-    toast(saved ? '设置已应用' : '设置已应用，浏览器未允许本地保存');
+    toast(saved ? tr('设置已应用', 'Settings applied') : tr('设置已应用，浏览器未允许本地保存', 'Settings applied, but browser storage was unavailable'));
     refreshSyncStatus();
     if (r2.config.enabled) { void syncSettings(); void syncHistory(); }
   });
@@ -354,7 +376,7 @@
   function renderCalendar(focusKey) {
     const year = viewMonth.getFullYear(), month = viewMonth.getMonth();
     const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
-    setText('month-label', isChinese ? `${year} 年 ${month + 1} 月` : new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(viewMonth));
+    setText('month-label', isZh() ? `${year} 年 ${month + 1} 月` : new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(viewMonth));
     const today = localDateKey();
     const practiced = new Map();
     for (const record of records) {
@@ -378,7 +400,7 @@
         button.classList.toggle('goal-met', metric.durationMs >= dailyGoalMinutes * 60000);
         button.classList.toggle('goal-missed', day < dateFromKey(today) && metric.durationMs < dailyGoalMinutes * 60000);
         if (key === today) button.setAttribute('aria-current', 'date');
-        button.setAttribute('aria-label', isChinese ? `${day.getFullYear()}年${day.getMonth() + 1}月${day.getDate()}日${key === today ? '，今天' : ''}，${count ? `${count}次练习` : '无练习记录'}` : `${key}${key === today ? ', today' : ''}, ${count ? `${count} sessions` : 'no practice records'}`);
+        button.setAttribute('aria-label', isZh() ? `${day.getFullYear()}年${day.getMonth() + 1}月${day.getDate()}日${key === today ? '，今天' : ''}，${count ? `${count}次练习` : '无练习记录'}` : `${key}${key === today ? ', today' : ''}, ${count ? `${count} sessions` : 'no practice records'}`);
         td.append(button); row.append(td);
       }
       fragment.append(row);
@@ -388,10 +410,10 @@
     setText('stat-sessions', String(monthly.length));
     setText('stat-days', String(new Set(monthly.map(r => r.date)).size));
     setText('stat-minutes', minutesLabel(monthly.reduce((sum, r) => sum + r.durationMs, 0)));
-    setText('daily-goal-label', isChinese ? `每日目标 ${dailyGoalMinutes} 分钟` : `Daily goal ${dailyGoalMinutes} min`);
+    setText('daily-goal-label', isZh() ? `每日目标 ${dailyGoalMinutes} 分钟` : `Daily goal ${dailyGoalMinutes} min`);
     const streak = currentStreak();
     $('streak-badge').hidden = !streak || !today.startsWith(prefix);
-    setText('streak-badge', isChinese ? `连续 ${streak} 天` : `${streak}-day streak`);
+    setText('streak-badge', isZh() ? `连续 ${streak} 天` : `${streak}-day streak`);
     if (focusKey) $('calendar-body').querySelector(`[data-date="${focusKey}"]`)?.focus();
   }
   function changeMonth(delta) {
@@ -402,39 +424,39 @@
   }
   function jumpToMonth() {
     const current = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}`;
-    const value = window.prompt('请输入年月（YYYY-MM）', current);
+    const value = window.prompt(tr('请输入年月（YYYY-MM）', 'Enter a month (YYYY-MM)'), current);
     if (value === null) return;
     const match = value.trim().match(/^(\d{4})-(\d{2})$/), month = match ? Number(match[2]) : 0;
-    if (!match || month < 1 || month > 12) { toast('请输入正确年月，例如 2026-04'); return; }
+    if (!match || month < 1 || month > 12) { toast(tr('请输入正确年月，例如 2026-04', 'Use a valid month, for example 2026-04')); return; }
     viewMonth = new Date(Number(match[1]), month - 1, 1, 12); renderCalendar();
   }
   function editDailyGoal() {
-    const value = window.prompt('请输入每日目标分钟数', String(dailyGoalMinutes));
+    const value = window.prompt(tr('请输入每日目标分钟数', 'Enter the daily goal in minutes'), String(dailyGoalMinutes));
     if (value === null) return;
     const minutes = Number(value);
-    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) { toast('请输入 1–1440 之间的整数'); return; }
-    dailyGoalMinutes = minutes; saveSettings(); renderCalendar(); toast('每日目标已更新');
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) { toast(tr('请输入 1–1440 之间的整数', 'Enter an integer from 1 to 1440')); return; }
+    dailyGoalMinutes = minutes; saveSettings(); renderCalendar(); toast(tr('每日目标已更新', 'Daily goal updated'));
     if (r2.config.enabled) void syncSettings();
   }
   function editSessionDuration() {
     if (engine.status === 'running' || engine.status === 'paused') return;
-    const value = window.prompt('请输入练习时长（分钟或 MM:SS）', formatClock(engine.totalMs));
+    const value = window.prompt(tr('请输入练习时长（分钟或 MM:SS）', 'Enter the session length in minutes or MM:SS'), formatClock(engine.totalMs));
     if (value === null) return;
     const text = value.trim(); let seconds;
     const clock = text.match(/^(\d{1,3}):(\d{1,2})$/);
     if (clock && Number(clock[2]) < 60) seconds = Number(clock[1]) * 60 + Number(clock[2]);
     else if (/^\d+(?:\.\d+)?$/.test(text)) seconds = Math.round(Number(text) * 60);
-    if (!Number.isInteger(seconds) || seconds < 1 || seconds > 7200) { toast('请输入 1 秒到 120 分钟之间的有效时长'); return; }
+    if (!Number.isInteger(seconds) || seconds < 1 || seconds > 7200) { toast(tr('请输入 1 秒到 120 分钟之间的有效时长', 'Enter a valid duration from 1 second to 120 minutes')); return; }
     engine.applyConfig({ ...engine.config, minutes: Math.max(1, Math.min(120, Math.round(seconds / 60))), sessionSeconds: seconds });
-    saveSettings(); render(); toast('练习时长已更新'); if (r2.config.enabled) void syncSettings();
+    saveSettings(); render(); toast(tr('练习时长已更新', 'Session length updated')); if (r2.config.enabled) void syncSettings();
   }
   function visibleRecords() { return records.filter(r => !historyDate || r.date === historyDate).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)); }
   function renderRecords() {
     const list = visibleRecords();
-    if (historyDate) { const d = dateFromKey(historyDate); setText('records-title', isChinese ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 · 练习` : `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · Practice`); }
+    if (historyDate) { const d = dateFromKey(historyDate); setText('records-title', isZh() ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 · 练习` : `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · Practice`); }
     else setText('records-title', tr('练习记录', 'Practice records'));
     const duration = list.reduce((n, r) => n + r.durationMs, 0);
-    setText('records-summary', isChinese ? `${list.length} 次练习 · ${minutesLabel(duration)} 分钟` : `${list.length} sessions · ${minutesLabel(duration)} min`);
+    setText('records-summary', isZh() ? `${list.length} 次练习 · ${minutesLabel(duration)} 分钟` : `${list.length} sessions · ${minutesLabel(duration)} min`);
     $('export-records').disabled = list.length === 0; $('records-empty').hidden = list.length !== 0;
     setText('empty-label', historyDate ? tr('这一天还没有练习记录', 'No practice records for this day') : tr('还没有练习记录', 'No practice records yet'));
     $('records-start').hidden = !!historyDate && historyDate !== localDateKey();
@@ -453,6 +475,12 @@
     $('records-list').replaceChildren(fragment);
   }
   function openRecords(date = null) { if (modal) return; historyDate = date; renderRecords(); openModal('records-dialog'); }
+  function toggleLanguage() {
+    language = isZh() ? 'en' : 'zh-CN'; persist(KEYS.language, language);
+    applyLanguage(); captions(); renderCalendar(); render(); refreshSyncStatus();
+    if (modal === $('records-dialog')) renderRecords();
+    if (modal === $('end-dialog')) setText('end-description', tr(`已练习 ${formatClock(engine.elapsedMs)}，结束后将保存到练习日历。`, `${formatClock(engine.elapsedMs)} practiced. Ending now will save it to your calendar.`));
+  }
   $('calendar-body').addEventListener('click', e => { const day = e.target.closest('button[data-date]'); if (day) openRecords(day.dataset.date); });
   $('calendar-body').addEventListener('keydown', e => {
     const steps = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
@@ -471,10 +499,11 @@
   $('reset').addEventListener('click', () => {
     if (engine.status === 'complete' || engine.elapsedMs < 1000) { reset(); return; }
     openModal('end-dialog');
-    setText('end-description', `已练习 ${formatClock(engine.elapsedMs)}，结束后将保存到练习日历。`);
+    setText('end-description', tr(`已练习 ${formatClock(engine.elapsedMs)}，结束后将保存到练习日历。`, `${formatClock(engine.elapsedMs)} practiced. Ending now will save it to your calendar.`));
   });
   $('end-confirm').addEventListener('click', () => { saveSession(false); closeModal(false); reset(); });
   $('toggle').addEventListener('click', toggle);
+  $('language-toggle').addEventListener('click', toggleLanguage);
   $('settings-open').addEventListener('click', openSettings); $('rhythm-settings').addEventListener('click', openSettings);
   for (const id of ['settings-close', 'settings-cancel', 'end-close', 'end-cancel', 'records-close']) $(id).addEventListener('click', () => closeModal(true));
   for (const id of ['settings-dialog', 'end-dialog', 'records-dialog']) {
