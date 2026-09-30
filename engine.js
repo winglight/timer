@@ -17,14 +17,16 @@
     return c;
   }
   function phaseAt(ms, config) {
-    const cycle = (config.inhale + config.exhale + config.hold) * 1000;
+    const cycle = (config.inhale + config.exhale + config.hold * 2) * 1000;
     let t = ((ms % cycle) + cycle) % cycle;
-    for (const phase of ['inhale', 'exhale', 'hold']) {
-      const duration = config[phase];
+    for (const [phase, duration, level] of [
+      ['inhale', config.inhale, null], ['hold', config.hold, 1],
+      ['exhale', config.exhale, null], ['hold', config.hold, 0]
+    ]) {
       if (!duration) continue;
       if (t < duration * 1000) {
         const progress = t / (duration * 1000);
-        return { phase, duration, progress, level: phase === 'inhale' ? smooth(progress) : phase === 'exhale' ? 1 - smooth(progress) : 0 };
+        return { phase, duration, progress, level: level ?? (phase === 'inhale' ? smooth(progress) : 1 - smooth(progress)) };
       }
       t -= duration * 1000;
     }
@@ -44,7 +46,7 @@
       const delta = Math.min(Math.max(0, now - this.lastNow), Math.max(0, this.totalMs - this.elapsedMs));
       this.lastNow = now;
       this.elapsedMs += delta;
-      this.cycleOffsetMs = (this.cycleOffsetMs + delta) % ((this.config.inhale + this.config.exhale + this.config.hold) * 1000);
+      this.cycleOffsetMs = (this.cycleOffsetMs + delta) % ((this.config.inhale + this.config.exhale + this.config.hold * 2) * 1000);
       if (this.elapsedMs >= this.totalMs) this.status = 'complete';
       return this.snapshot();
     }
@@ -64,11 +66,12 @@
       const old = phaseAt(this.cycleOffsetMs, this.config);
       const resolved = readConfig(next);
       this.config = Object.freeze(resolved);
-      // Preserve phase and normalized volume when timings change. Removing a
-      // zero-length hold moves to the start of inhale at the SAME minimum size.
+      // Preserve the phase and volume when timings change, including which
+      // side of the breath a hold belongs to.
       if (old.phase === 'inhale') this.cycleOffsetMs = old.progress * resolved.inhale * 1000;
-      else if (old.phase === 'exhale') this.cycleOffsetMs = (resolved.inhale + old.progress * resolved.exhale) * 1000;
-      else this.cycleOffsetMs = resolved.hold ? (resolved.inhale + resolved.exhale + old.progress * resolved.hold) * 1000 : 0;
+      else if (old.phase === 'exhale') this.cycleOffsetMs = (resolved.inhale + resolved.hold + old.progress * resolved.exhale) * 1000;
+      else if (old.level === 1) this.cycleOffsetMs = (resolved.inhale + old.progress * resolved.hold) * 1000;
+      else this.cycleOffsetMs = resolved.hold ? (resolved.inhale + resolved.hold + resolved.exhale + old.progress * resolved.hold) * 1000 : 0;
       if (this.status !== 'idle' && this.elapsedMs >= this.totalMs) this.status = 'complete';
       this.lastNow = now;
     }

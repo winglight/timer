@@ -7,9 +7,10 @@ const { DEFAULTS, BreathEngine, phaseAt, readConfig } = require('../engine.js');
 
 test('breathing phases follow the configured monotonic timeline', () => {
   assert.equal(phaseAt(0, DEFAULTS).phase, 'inhale');
-  assert.equal(phaseAt(4000, DEFAULTS).phase, 'exhale');
-  assert.equal(phaseAt(10000, DEFAULTS).phase, 'hold');
-  assert.equal(phaseAt(12000, DEFAULTS).phase, 'inhale');
+  assert.deepEqual([phaseAt(4000, DEFAULTS).phase, phaseAt(4000, DEFAULTS).level], ['hold', 1]);
+  assert.equal(phaseAt(6000, DEFAULTS).phase, 'exhale');
+  assert.deepEqual([phaseAt(12000, DEFAULTS).phase, phaseAt(12000, DEFAULTS).level], ['hold', 0]);
+  assert.equal(phaseAt(14000, DEFAULTS).phase, 'inhale');
   assert.equal(phaseAt(10000, { ...DEFAULTS, hold: 0 }).phase, 'inhale');
 });
 
@@ -20,7 +21,8 @@ test('pause and resume exclude paused wall-clock time', () => {
   assert.equal(engine.elapsedMs, 3250);
   engine.start(); now += 750; engine.tick();
   assert.equal(engine.elapsedMs, 4000);
-  assert.equal(engine.snapshot().phase, 'exhale');
+  assert.equal(engine.snapshot().phase, 'hold');
+  assert.equal(engine.snapshot().level, 1);
 });
 
 test('exact MM:SS session lengths are supported without rounding', () => {
@@ -41,6 +43,19 @@ test('changing rhythm preserves elapsed time and normalized phase progress', () 
   assert.equal(engine.elapsedMs, 2000);
   assert.equal(engine.snapshot().phase, before.phase);
   assert.equal(engine.snapshot().progress, before.progress);
+});
+
+test('changing hold duration preserves the correct high or low hold', () => {
+  let now = 0;
+  const engine = new BreathEngine(DEFAULTS, () => now);
+  engine.start(); now = 4500; engine.pause();
+  engine.applyConfig(readConfig({ ...DEFAULTS, hold: 1 }));
+  assert.equal(engine.snapshot().phase, 'hold');
+  assert.equal(engine.snapshot().level, 1);
+  assert.equal(engine.snapshot().progress, .25);
+  engine.start(); now += 7500; engine.tick();
+  assert.equal(engine.snapshot().phase, 'hold');
+  assert.equal(engine.snapshot().level, 0);
 });
 
 test('page keeps sound, R2 sync, records, export, wake lock and prototype assets wired', () => {

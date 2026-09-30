@@ -55,7 +55,7 @@
   let records = mergeRecords(load(KEYS.sessions, []), load(KEYS.legacySessions, []));
   persist(KEYS.sessions, records);
   const r2 = new window.R2Sync();
-  let session = null, raf = 0, settle = null, toastTimer = 0;
+  let session = null, raf = 0, backgroundTimer = 0, settle = null, toastTimer = 0;
   let modal = null, resumeAfterModal = false, historyDate = null;
   let viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
   let lastDate = localDateKey();
@@ -75,7 +75,7 @@
     text('.card-quote p', tr('呼吸是当下的锚，也是通往内心的桥。', 'Breath anchors us in the present and bridges us to our inner self.')); text('.card-quote footer', tr('— 呼吸 · 更好的自己', '— Breathe · A better self'));
     text('#settings-title', tr('练习设置', 'Practice settings'));
     (isZh() ? ['吸气','呼气','停留','练习时长'] : ['Inhale','Exhale','Hold','Session length']).forEach((value, index) => { document.querySelectorAll('.setting-label')[index].childNodes[0].textContent = value; });
-    text('#row-hold small', tr('每次呼气后', 'After each exhale'));
+    text('#row-hold small', tr('每次吸气和呼气后', 'After each inhale and exhale'));
     document.querySelectorAll('.stepper .unit').forEach((unit, index) => { unit.textContent = index === 3 ? tr('分钟', 'min') : tr('秒', 'sec'); });
     text('.toggle-row > span:first-child', tr('显示阶段倒计时', 'Show phase countdown')); text('#cloud-title', tr('R2 云同步', 'R2 cloud sync'));
     document.querySelectorAll('.cloud-fields label').forEach((label, index) => { label.childNodes[0].textContent = (isZh() ? ['应用名称','服务地址','访问令牌'] : ['App','Service URL','Access token'])[index]; });
@@ -275,7 +275,21 @@
     engine.tick(now); completeIfNeeded(); render();
     if ((engine.status === 'running' || settle) && !document.hidden) raf = requestAnimationFrame(loop);
   }
-  function schedule() { cancelAnimationFrame(raf); raf = 0; loop(performance.now()); }
+  function scheduleBackgroundCompletion() {
+    clearTimeout(backgroundTimer); backgroundTimer = 0;
+    if (engine.status !== 'running' || !document.hidden) return;
+    backgroundTimer = setTimeout(() => {
+      backgroundTimer = 0;
+      engine.tick(performance.now()); completeIfNeeded();
+      if (engine.status === 'running') scheduleBackgroundCompletion();
+    }, engine.totalMs - engine.elapsedMs);
+  }
+  function schedule() {
+    cancelAnimationFrame(raf); raf = 0;
+    clearTimeout(backgroundTimer); backgroundTimer = 0;
+    loop(performance.now());
+    scheduleBackgroundCompletion();
+  }
   async function start() {
     const audio = ensureAudio();
     if (audio?.state === 'suspended') { try { await audio.resume(); } catch (_) {} }
@@ -288,11 +302,11 @@
     }
     settle = null; engine.start(); void requestWakeLock(); schedule();
   }
-  function pause() { engine.pause(); cancelAnimationFrame(raf); raf = 0; void releaseWakeLock(); completeIfNeeded(); render(); }
+  function pause() { engine.pause(); cancelAnimationFrame(raf); raf = 0; clearTimeout(backgroundTimer); backgroundTimer = 0; void releaseWakeLock(); completeIfNeeded(); render(); }
   function toggle() { if (modal) return; engine.status === 'running' ? pause() : void start(); }
   function reset() {
     const from = renderer.frame.level;
-    cancelAnimationFrame(raf); engine.reset(); session = null; lastTonePhase = null; void releaseWakeLock();
+    cancelAnimationFrame(raf); clearTimeout(backgroundTimer); backgroundTimer = 0; engine.reset(); session = null; lastTonePhase = null; void releaseWakeLock();
     settle = { from, started: performance.now() }; schedule();
   }
   function openModal(id) {
@@ -522,7 +536,21 @@
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' && !e.repeat && !modal && !e.target.closest('input,textarea,button,select,[contenteditable="true"]')) { e.preventDefault(); toggle(); }
   });
-  document.addEventListener('visibilitychange', () => { cancelAnimationFrame(raf); raf = 0; if (!document.hidden) schedule(); });
+  document.addEventListener('visibilitychange', () => schedule());
+  window.addEventListener('pagehide', () => {
+    // A hidden tab can be closed before its animation frame or completion timer
+    // runs. Persist the elapsed practice synchronously while storage is available.
+    engine.tick(performance.now());
+    if (session && !session.saved && engine.elapsedMs >= 1000) saveSession(engine.status === 'complete');
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted && session) {
+      // A page restored from the back-forward cache may continue the session.
+      // Its final record will replace the partial record with the same id.
+      session.saved = false;
+      schedule();
+    }
+  });
   window.addEventListener('storage', e => { if (e.key === KEYS.sessions) { records = safeRecords(load(KEYS.sessions, [])); renderCalendar(); if (modal === $('records-dialog')) renderRecords(); } });
   applyLanguage(); captions(); renderCalendar(); render(); refreshSyncStatus();
   if (r2.config.enabled) void (async () => { await hydrateSettings(); await syncHistory(); })();
