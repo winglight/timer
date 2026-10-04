@@ -45,7 +45,7 @@ test('breathing phases follow the configured monotonic timeline', () => {
 
 function soundHarness(config = DEFAULTS, hidden = false) {
   let now = 0, timerId = 0;
-  const timers = new Map(), tones = [], elements = new Map();
+  const timers = new Map(), tones = [], envelopes = [], elements = new Map();
   const engine = new BreathEngine(config, () => now);
   const context = {
     engine, audioContext: null, toneOscillator: null, toneGain: null, lastTonePhase: null,
@@ -57,7 +57,12 @@ function soundHarness(config = DEFAULTS, hidden = false) {
       state = 'running';
       get currentTime() { return now / 1000; }
       createOscillator() { return { connect() {}, start() {}, frequency: { setValueAtTime: frequency => tones.push([now, frequency]) } }; }
-      createGain() { return { connect() {}, gain: { cancelScheduledValues() {}, setValueAtTime() {}, exponentialRampToValueAtTime() {} } }; }
+      createGain() { return { connect() {}, gain: {
+        cancelScheduledValues: time => envelopes.push(['cancel', time]),
+        setValueAtTime: (value, time) => envelopes.push(['set', value, time]),
+        linearRampToValueAtTime: (value, time) => envelopes.push(['linear', value, time]),
+        exponentialRampToValueAtTime: (value, time) => envelopes.push(['exponential', value, time])
+      } }; }
     } },
     $: id => { if (!elements.has(id)) elements.set(id, { dataset: {}, setAttribute() {} }); return elements.get(id); },
     setText() {}, phaseWord: phase => phase, tr: zh => zh, isZh: () => true,
@@ -74,7 +79,7 @@ function soundHarness(config = DEFAULTS, hidden = false) {
   vm.createContext(context);
   vm.runInContext(`${audioCode}\n${timingCode}\nensureAudio(); engine.start(); schedule();`, context);
   return {
-    tones, engine, context,
+    tones, envelopes, engine, context,
     run: code => vm.runInContext(code, context),
     advance(ms) {
       const target = now + ms;
@@ -88,11 +93,36 @@ function soundHarness(config = DEFAULTS, hidden = false) {
   };
 }
 
+test('phase cues use equal pitch and gain, distinct lengths and smooth fades to silence', () => {
+  const harness = soundHarness();
+  const lengths = {};
+  for (const phase of ['inhale', 'hold', 'exhale']) {
+    harness.envelopes.length = 0;
+    harness.run(`playTone('${phase}');`);
+    const events = harness.envelopes;
+    const peak = events.find(event => event[0] === 'linear' && event[1] > 0);
+    const sustain = events.find(event => event[0] === 'set' && event[1] > 0);
+    assert.equal(harness.tones.at(-1)[1], 330);
+    assert.equal(peak[1], 0.1);
+    assert.equal(sustain[1], peak[1]);
+    assert.ok(peak[2] > 0);
+    assert.ok(sustain[2] > peak[2]);
+    assert.equal(events.at(-1)[0], 'linear');
+    assert.equal(events.at(-1)[1], 0);
+    assert.ok(events.at(-1)[2] > sustain[2]);
+    lengths[phase] = events.at(-1)[2];
+  }
+  assert.ok(lengths.hold < lengths.inhale / 2);
+  assert.equal(lengths.inhale, 0.4);
+  assert.ok(lengths.inhale < lengths.exhale);
+  assert.ok(lengths.exhale < 1); // Finish before even a one-second phase changes.
+});
+
 for (const hidden of [false, true]) {
   test(`every phase plays a cue including both holds (${hidden ? 'background' : 'foreground without animation frames'})`, () => {
     const harness = soundHarness(DEFAULTS, hidden);
     harness.advance(14000);
-    assert.deepEqual(harness.tones, [[0, 440], [4000, 262], [6000, 330], [12000, 262], [14000, 440]]);
+    assert.deepEqual(harness.tones, [[0, 330], [4000, 330], [6000, 330], [12000, 330], [14000, 330]]);
     harness.run('render(); render();');
     assert.equal(harness.tones.length, 5);
   });
@@ -102,30 +132,30 @@ test('phase cues stop when paused and skip holds configured to zero', async () =
   const harness = soundHarness({ ...DEFAULTS, hold: 0 }, true);
   harness.advance(4000);
   harness.run('pause();'); harness.advance(20000);
-  assert.deepEqual(harness.tones, [[0, 440], [4000, 330]]);
+  assert.deepEqual(harness.tones, [[0, 330], [4000, 330]]);
   await harness.run('start();'); harness.advance(6000);
-  assert.deepEqual(harness.tones, [[0, 440], [4000, 330], [30000, 440]]);
+  assert.deepEqual(harness.tones, [[0, 330], [4000, 330], [30000, 330]]);
 });
 
 test('an interrupted audio context can retry the current hold cue after recovery', () => {
   const harness = soundHarness();
   harness.context.audioContext.state = 'suspended';
   harness.advance(4000);
-  assert.deepEqual(harness.tones, [[0, 440]]);
+  assert.deepEqual(harness.tones, [[0, 330]]);
   harness.context.audioContext.state = 'running';
   harness.run('render(); render();');
-  assert.deepEqual(harness.tones, [[0, 440], [4000, 262]]);
+  assert.deepEqual(harness.tones, [[0, 330], [4000, 330]]);
 });
 
 test('phase cues stop at session completion and reset', () => {
   const completed = soundHarness(readConfig({ ...DEFAULTS, sessionSeconds: 6 }), true);
   completed.advance(20000);
   assert.equal(completed.engine.status, 'complete');
-  assert.deepEqual(completed.tones, [[0, 440], [4000, 262]]);
+  assert.deepEqual(completed.tones, [[0, 330], [4000, 330]]);
   const reset = soundHarness();
   reset.advance(4000); reset.run('reset();'); reset.advance(20000);
   assert.equal(reset.engine.status, 'idle');
-  assert.deepEqual(reset.tones, [[0, 440], [4000, 262]]);
+  assert.deepEqual(reset.tones, [[0, 330], [4000, 330]]);
 });
 
 test('pause and resume exclude paused wall-clock time', () => {

@@ -196,7 +196,7 @@
       if (!Audio) return null;
       audioContext = new Audio({ latencyHint: 'interactive' });
       toneOscillator = audioContext.createOscillator(); toneGain = audioContext.createGain();
-      toneOscillator.type = 'sine'; toneGain.gain.value = 0.0001;
+      toneOscillator.type = 'sine'; toneGain.gain.value = 0;
       toneOscillator.connect(toneGain); toneGain.connect(audioContext.destination); toneOscillator.start();
     }
     return audioContext;
@@ -204,10 +204,13 @@
   function playTone(phase) {
     if (!audioContext || !toneOscillator || !toneGain || audioContext.state !== 'running') return false;
     const now = audioContext.currentTime;
-    toneOscillator.frequency.setValueAtTime({ inhale: 440, exhale: 330, hold: 262 }[phase] || 330, now);
-    toneGain.gain.cancelScheduledValues(now); toneGain.gain.setValueAtTime(0.0001, now);
-    toneGain.gain.exponentialRampToValueAtTime(0.075, now + 0.025);
-    toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    const duration = { inhale: 0.4, exhale: 0.6, hold: 0.12 }[phase] || 0.4;
+    // Use one pitch and gain; cue length identifies each breathing phase.
+    toneOscillator.frequency.setValueAtTime(330, now);
+    toneGain.gain.cancelScheduledValues(now); toneGain.gain.setValueAtTime(0, now);
+    toneGain.gain.linearRampToValueAtTime(0.1, now + 0.02);
+    toneGain.gain.setValueAtTime(0.1, now + duration - 0.06);
+    toneGain.gain.linearRampToValueAtTime(0, now + duration);
     return true;
   }
   async function requestWakeLock() {
