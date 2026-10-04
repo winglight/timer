@@ -55,7 +55,7 @@
   let records = mergeRecords(load(KEYS.sessions, []), load(KEYS.legacySessions, []));
   persist(KEYS.sessions, records);
   const r2 = new window.R2Sync();
-  let session = null, raf = 0, backgroundTimer = 0, settle = null, toastTimer = 0;
+  let session = null, raf = 0, phaseTimer = 0, settle = null, toastTimer = 0;
   let modal = null, resumeAfterModal = false, historyDate = null;
   let viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
   let lastDate = localDateKey();
@@ -202,12 +202,13 @@
     return audioContext;
   }
   function playTone(phase) {
-    if (!audioContext || !toneOscillator || !toneGain || audioContext.state !== 'running') return;
+    if (!audioContext || !toneOscillator || !toneGain || audioContext.state !== 'running') return false;
     const now = audioContext.currentTime;
     toneOscillator.frequency.setValueAtTime({ inhale: 440, exhale: 330, hold: 262 }[phase] || 330, now);
     toneGain.gain.cancelScheduledValues(now); toneGain.gain.setValueAtTime(0.0001, now);
     toneGain.gain.exponentialRampToValueAtTime(0.075, now + 0.025);
     toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    return true;
   }
   async function requestWakeLock() {
     if (!navigator.wakeLock || wakeLock) return;
@@ -257,7 +258,8 @@
       frame.level = settle.from * (1 - smooth(p)); if (p >= 1) settle = null;
     }
     renderer.setFrame(frame);
-    if (frame.status === 'running' && frame.phase !== lastTonePhase) { lastTonePhase = frame.phase; playTone(frame.phase); }
+    const tonePhase = frame.phase === 'hold' ? `hold:${frame.level}` : frame.phase;
+    if (frame.status === 'running' && tonePhase !== lastTonePhase && playTone(frame.phase)) lastTonePhase = tonePhase;
     setText('phase-label', word); setText('phase-live', word);
     const isActive = frame.status === 'running' || frame.status === 'paused';
     $('phase-seconds').hidden = !(engine.config.showCountdown && isActive);
@@ -275,20 +277,23 @@
     engine.tick(now); completeIfNeeded(); render();
     if ((engine.status === 'running' || settle) && !document.hidden) raf = requestAnimationFrame(loop);
   }
-  function scheduleBackgroundCompletion() {
-    clearTimeout(backgroundTimer); backgroundTimer = 0;
-    if (engine.status !== 'running' || !document.hidden) return;
-    backgroundTimer = setTimeout(() => {
-      backgroundTimer = 0;
-      engine.tick(performance.now()); completeIfNeeded();
-      if (engine.status === 'running') scheduleBackgroundCompletion();
-    }, engine.totalMs - engine.elapsedMs);
+  function schedulePhaseChange() {
+    clearTimeout(phaseTimer); phaseTimer = 0;
+    if (engine.status !== 'running') return;
+    const frame = engine.snapshot();
+    // Audio cues must keep advancing even when animation frames are suspended.
+    const delay = Math.min(frame.duration * (1 - frame.progress) * 1000, frame.remainingMs);
+    phaseTimer = setTimeout(() => {
+      phaseTimer = 0;
+      engine.tick(performance.now()); completeIfNeeded(); render();
+      schedulePhaseChange();
+    }, Math.max(1, delay));
   }
   function schedule() {
     cancelAnimationFrame(raf); raf = 0;
-    clearTimeout(backgroundTimer); backgroundTimer = 0;
+    clearTimeout(phaseTimer); phaseTimer = 0;
     loop(performance.now());
-    scheduleBackgroundCompletion();
+    schedulePhaseChange();
   }
   async function start() {
     const audio = ensureAudio();
@@ -302,11 +307,11 @@
     }
     settle = null; engine.start(); void requestWakeLock(); schedule();
   }
-  function pause() { engine.pause(); cancelAnimationFrame(raf); raf = 0; clearTimeout(backgroundTimer); backgroundTimer = 0; void releaseWakeLock(); completeIfNeeded(); render(); }
+  function pause() { engine.pause(); cancelAnimationFrame(raf); raf = 0; clearTimeout(phaseTimer); phaseTimer = 0; void releaseWakeLock(); completeIfNeeded(); render(); }
   function toggle() { if (modal) return; engine.status === 'running' ? pause() : void start(); }
   function reset() {
     const from = renderer.frame.level;
-    cancelAnimationFrame(raf); clearTimeout(backgroundTimer); backgroundTimer = 0; engine.reset(); session = null; lastTonePhase = null; void releaseWakeLock();
+    cancelAnimationFrame(raf); clearTimeout(phaseTimer); phaseTimer = 0; engine.reset(); session = null; lastTonePhase = null; void releaseWakeLock();
     settle = { from, started: performance.now() }; schedule();
   }
   function openModal(id) {
@@ -374,8 +379,8 @@
     event.target.removeAttribute('aria-invalid');
   });
   $('r2-enabled').addEventListener('change', () => { $('cloud-fields').hidden = !$('r2-enabled').checked; });
-  function currentStreak() {
-    const dates = new Set(records.map(r => r.date));
+  function currentStreak(monthlyRecords) {
+    const dates = new Set(monthlyRecords.map(r => r.date));
     const cursor = dateFromKey(localDateKey());
     if (!dates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
     let streak = 0;
@@ -425,7 +430,7 @@
     setText('stat-days', String(new Set(monthly.map(r => r.date)).size));
     setText('stat-minutes', minutesLabel(monthly.reduce((sum, r) => sum + r.durationMs, 0)));
     setText('daily-goal-label', isZh() ? `每日目标 ${dailyGoalMinutes} 分钟` : `Daily goal ${dailyGoalMinutes} min`);
-    const streak = currentStreak();
+    const streak = currentStreak(monthly);
     $('streak-badge').hidden = !streak || !today.startsWith(prefix);
     setText('streak-badge', isZh() ? `连续 ${streak} 天` : `${streak}-day streak`);
     if (focusKey) $('calendar-body').querySelector(`[data-date="${focusKey}"]`)?.focus();

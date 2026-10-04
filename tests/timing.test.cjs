@@ -3,7 +3,36 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { DEFAULTS, BreathEngine, phaseAt, readConfig } = require('../engine.js');
+
+test('calendar overview limits the current streak to the displayed month', () => {
+  const { localDateKey, dateFromKey } = require('../engine.js');
+  const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const calendarCode = app.slice(app.indexOf('  function currentStreak('), app.indexOf('  function changeMonth('));
+  function overview(today, dates, displayedMonth = today.slice(0, 7)) {
+    const elements = new Map();
+    const element = () => ({ classList: { toggle() {} }, dataset: {}, append() {}, setAttribute() {}, replaceChildren() {} });
+    const context = {
+      Date, Set, Map, Intl,
+      records: dates.map(date => ({ date, durationMs: 600000 })),
+      viewMonth: dateFromKey(`${displayedMonth}-01`), dailyGoalMinutes: 10,
+      localDateKey: date => date ? localDateKey(date) : today, dateFromKey,
+      isZh: () => true,
+      $: id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
+      setText: (id, text) => { context.$(id).textContent = text; },
+      document: { createDocumentFragment: element, createElement: element }
+    };
+    vm.runInNewContext(`${calendarCode}\nrenderCalendar();`, context);
+    return { streak: elements.get('streak-badge').textContent, hidden: elements.get('streak-badge').hidden, days: elements.get('stat-days').textContent };
+  }
+  assert.deepEqual(overview('2026-10-01', ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01']), { streak: '连续 1 天', hidden: false, days: '1' });
+  assert.deepEqual(overview('2027-01-01', ['2026-12-31', '2027-01-01']), { streak: '连续 1 天', hidden: false, days: '1' });
+  assert.deepEqual(overview('2026-10-01', ['2026-09-30']), { streak: '连续 0 天', hidden: true, days: '0' });
+  assert.deepEqual(overview('2026-10-04', ['2026-10-01', '2026-10-02', '2026-10-02', '2026-10-03']), { streak: '连续 3 天', hidden: false, days: '3' });
+  assert.deepEqual(overview('2026-10-04', ['2026-10-01', '2026-10-03', '2026-10-04']), { streak: '连续 2 天', hidden: false, days: '3' });
+  assert.equal(overview('2026-10-01', ['2026-09-30', '2026-10-01'], '2026-09').hidden, true);
+});
 
 test('breathing phases follow the configured monotonic timeline', () => {
   assert.equal(phaseAt(0, DEFAULTS).phase, 'inhale');
@@ -12,6 +41,91 @@ test('breathing phases follow the configured monotonic timeline', () => {
   assert.deepEqual([phaseAt(12000, DEFAULTS).phase, phaseAt(12000, DEFAULTS).level], ['hold', 0]);
   assert.equal(phaseAt(14000, DEFAULTS).phase, 'inhale');
   assert.equal(phaseAt(10000, { ...DEFAULTS, hold: 0 }).phase, 'inhale');
+});
+
+function soundHarness(config = DEFAULTS, hidden = false) {
+  let now = 0, timerId = 0;
+  const timers = new Map(), tones = [], elements = new Map();
+  const engine = new BreathEngine(config, () => now);
+  const context = {
+    engine, audioContext: null, toneOscillator: null, toneGain: null, lastTonePhase: null,
+    raf: 0, phaseTimer: 0, settle: null, session: null,
+    renderer: { frame: { level: 0 }, motion: { matches: true }, seedParticles() {}, setFrame() {} },
+    performance: { now: () => now },
+    document: { hidden, body: { dataset: {} } },
+    window: { AudioContext: class {
+      state = 'running';
+      get currentTime() { return now / 1000; }
+      createOscillator() { return { connect() {}, start() {}, frequency: { setValueAtTime: frequency => tones.push([now, frequency]) } }; }
+      createGain() { return { connect() {}, gain: { cancelScheduledValues() {}, setValueAtTime() {}, exponentialRampToValueAtTime() {} } }; }
+    } },
+    $: id => { if (!elements.has(id)) elements.set(id, { dataset: {}, setAttribute() {} }); return elements.get(id); },
+    setText() {}, phaseWord: phase => phase, tr: zh => zh, isZh: () => true,
+    formatClock: () => '', smooth: t => t,
+    localDateKey: () => '2026-10-04', lastDate: '2026-10-04',
+    completeIfNeeded() {}, requestWakeLock() {}, releaseWakeLock() {},
+    requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+    setTimeout: (callback, delay) => { const id = ++timerId; timers.set(id, { callback, at: now + delay }); return id; },
+    clearTimeout: id => timers.delete(id)
+  };
+  const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const audioCode = app.slice(app.indexOf('  function ensureAudio('), app.indexOf('  async function requestWakeLock('));
+  const timingCode = app.slice(app.indexOf('  function render('), app.indexOf('  function openModal('));
+  vm.createContext(context);
+  vm.runInContext(`${audioCode}\n${timingCode}\nensureAudio(); engine.start(); schedule();`, context);
+  return {
+    tones, engine, context,
+    run: code => vm.runInContext(code, context),
+    advance(ms) {
+      const target = now + ms;
+      while (timers.size) {
+        const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
+        if (timer.at > target) break;
+        now = timer.at; timers.delete(id); timer.callback();
+      }
+      now = target;
+    }
+  };
+}
+
+for (const hidden of [false, true]) {
+  test(`every phase plays a cue including both holds (${hidden ? 'background' : 'foreground without animation frames'})`, () => {
+    const harness = soundHarness(DEFAULTS, hidden);
+    harness.advance(14000);
+    assert.deepEqual(harness.tones, [[0, 440], [4000, 262], [6000, 330], [12000, 262], [14000, 440]]);
+    harness.run('render(); render();');
+    assert.equal(harness.tones.length, 5);
+  });
+}
+
+test('phase cues stop when paused and skip holds configured to zero', async () => {
+  const harness = soundHarness({ ...DEFAULTS, hold: 0 }, true);
+  harness.advance(4000);
+  harness.run('pause();'); harness.advance(20000);
+  assert.deepEqual(harness.tones, [[0, 440], [4000, 330]]);
+  await harness.run('start();'); harness.advance(6000);
+  assert.deepEqual(harness.tones, [[0, 440], [4000, 330], [30000, 440]]);
+});
+
+test('an interrupted audio context can retry the current hold cue after recovery', () => {
+  const harness = soundHarness();
+  harness.context.audioContext.state = 'suspended';
+  harness.advance(4000);
+  assert.deepEqual(harness.tones, [[0, 440]]);
+  harness.context.audioContext.state = 'running';
+  harness.run('render(); render();');
+  assert.deepEqual(harness.tones, [[0, 440], [4000, 262]]);
+});
+
+test('phase cues stop at session completion and reset', () => {
+  const completed = soundHarness(readConfig({ ...DEFAULTS, sessionSeconds: 6 }), true);
+  completed.advance(20000);
+  assert.equal(completed.engine.status, 'complete');
+  assert.deepEqual(completed.tones, [[0, 440], [4000, 262]]);
+  const reset = soundHarness();
+  reset.advance(4000); reset.run('reset();'); reset.advance(20000);
+  assert.equal(reset.engine.status, 'idle');
+  assert.deepEqual(reset.tones, [[0, 440], [4000, 262]]);
 });
 
 test('pause and resume exclude paused wall-clock time', () => {
