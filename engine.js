@@ -40,13 +40,16 @@
       this.reset();
     }
     get totalMs() { return this.config.sessionSeconds * 1000; }
-    reset() { this.status = 'idle'; this.elapsedMs = 0; this.cycleOffsetMs = 0; this.lastNow = this.now(); }
+    reset() { this.status = 'idle'; this.elapsedMs = 0; this.cycleOffsetMs = 0; this.completedCycles = 0; this.lastNow = this.now(); }
     tick(now = this.now()) {
       if (this.status !== 'running') return this.snapshot();
       const delta = Math.min(Math.max(0, now - this.lastNow), Math.max(0, this.totalMs - this.elapsedMs));
       this.lastNow = now;
       this.elapsedMs += delta;
-      this.cycleOffsetMs = (this.cycleOffsetMs + delta) % ((this.config.inhale + this.config.exhale + this.config.hold * 2) * 1000);
+      const cycleMs = (this.config.inhale + this.config.exhale + this.config.hold * 2) * 1000;
+      const position = this.cycleOffsetMs + delta;
+      this.completedCycles += Math.floor(position / cycleMs);
+      this.cycleOffsetMs = position % cycleMs;
       if (this.elapsedMs >= this.totalMs) this.status = 'complete';
       return this.snapshot();
     }
@@ -77,7 +80,7 @@
     }
     snapshot() {
       const phase = phaseAt(this.cycleOffsetMs, this.config);
-      return { ...phase, status: this.status, elapsedMs: this.elapsedMs,
+      return { ...phase, status: this.status, elapsedMs: this.elapsedMs, cycleIndex: this.completedCycles,
         remainingMs: this.status === 'complete' ? 0 : Math.max(0, this.totalMs - this.elapsedMs),
         showCountdown: this.config.showCountdown };
     }

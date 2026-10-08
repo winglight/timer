@@ -62,6 +62,21 @@
   let audioContext = null, toneOscillator = null, toneGain = null, lastTonePhase = null, wakeLock = null;
   const fields = Object.keys(RANGES);
   const phaseWord = phase => (isZh() ? { inhale: '吸气', exhale: '呼气', hold: '停留' } : { inhale: 'Inhale', exhale: 'Exhale', hold: 'Hold' })[phase];
+  const BREATHING_QUOTES = [
+    ['一呼一吸之间，让心回到此刻。', 'With each breath, let your mind return to now.'],
+    ['吸气，感受自己；呼气，轻轻放下。', 'Breathe in and feel yourself here. Breathe out and let go.'],
+    ['不必追赶什么，只需陪伴这一口呼吸。', 'There is nothing to chase. Stay with this one breath.'],
+    ['让念头像云一样经过，让呼吸带你回来。', 'Let thoughts pass like clouds. Let your breath bring you back.'],
+    ['把肩上的重量，交给缓缓的呼气。', 'Let a gentle exhale carry the weight from your shoulders.'],
+    ['此刻，无需改变什么，安静感受就好。', 'Nothing needs to change right now. Simply notice.'],
+    ['放下昨日与明天，住进当下的宁静。', 'Let yesterday and tomorrow rest. Settle into the quiet of now.'],
+    ['每一次呼吸，都是重新开始的机会。', 'Every breath is a chance to begin again.'],
+    ['心若走远了，就用一口呼吸轻轻唤回。', 'When your mind wanders, gently call it back with a breath.'],
+    ['慢一点，让内心有空间安静下来。', 'Slow down. Give your mind room to become still.'],
+    ['无需握紧，平静会在松开时到来。', 'Loosen your grip and make room for calm.'],
+    ['呼吸自有节奏，你只需温柔地跟随。', 'Your breath has its own rhythm. Follow it gently.']
+  ];
+  let quoteIndex = -1, quoteCycle = -1;
   function applyLanguage() {
     document.documentElement.lang = language;
     document.title = tr('呼吸 · 回到当下', 'Breathing · Return to the present');
@@ -250,8 +265,26 @@
       void releaseWakeLock();
     }
   }
+  function renderBreathingQuote(frame) {
+    // The engine counts full inhale/hold/exhale/hold cycles, including time
+    // spent in a background tab. Pauses and rhythm edits preserve this count.
+    if (quoteIndex < 0 || (frame.status === 'running' && quoteCycle !== frame.cycleIndex)) {
+      const choices = BREATHING_QUOTES.length - (quoteIndex < 0 ? 0 : 1);
+      let next = Math.floor(Math.random() * choices);
+      if (quoteIndex >= 0 && next >= quoteIndex) next++;
+      quoteIndex = next; quoteCycle = frame.cycleIndex;
+    }
+    setText('breathing-quote', BREATHING_QUOTES[quoteIndex][isZh() ? 0 : 1]);
+    const cycleMs = (engine.config.inhale + engine.config.exhale + engine.config.hold * 2) * 1000;
+    const fadeMs = Math.min(900, cycleMs / 4);
+    const opacity = frame.status === 'running' && !renderer.motion.matches
+      ? smooth(Math.min(engine.cycleOffsetMs / fadeMs, (cycleMs - engine.cycleOffsetMs) / fadeMs, 1))
+      : 1;
+    $('breathing-quote').style.opacity = String(opacity);
+  }
   function render() {
     const frame = engine.snapshot();
+    renderBreathingQuote(frame);
     let word = phaseWord(frame.phase);
     if (frame.status === 'idle') { word = tr('准备', 'Ready'); frame.level = 0; }
     else if (frame.status === 'paused') word = tr('已暂停', 'Paused');
@@ -307,6 +340,7 @@
         startedAt: new Date().toISOString(), date: localDateKey(), saved: false
       };
       renderer.lastElapsed = 0; renderer.seedParticles(); lastTonePhase = null;
+      quoteCycle = -1;
     }
     settle = null; engine.start(); void requestWakeLock(); schedule();
   }
@@ -315,6 +349,7 @@
   function reset() {
     const from = renderer.frame.level;
     cancelAnimationFrame(raf); clearTimeout(phaseTimer); phaseTimer = 0; engine.reset(); session = null; lastTonePhase = null; void releaseWakeLock();
+    quoteCycle = -1;
     settle = { from, started: performance.now() }; schedule();
   }
   function openModal(id) {
@@ -418,6 +453,7 @@
         button.type = 'button'; button.className = 'day'; button.dataset.date = key;
         button.textContent = String(day.getDate());
         button.classList.toggle('outside', day.getMonth() !== month);
+        button.classList.toggle('past', key < today);
         button.classList.toggle('today', key === today); button.classList.toggle('has-record', count > 0);
         button.classList.toggle('goal-met', metric.durationMs >= dailyGoalMinutes * 60000);
         button.classList.toggle('goal-missed', day < dateFromKey(today) && metric.durationMs < dailyGoalMinutes * 60000);

@@ -43,13 +43,67 @@ test('breathing phases follow the configured monotonic timeline', () => {
   assert.equal(phaseAt(10000, { ...DEFAULTS, hold: 0 }).phase, 'inhale');
 });
 
+test('quotes change once per full breath, fade at cycle edges and preserve the cycle through pauses and rhythm edits', () => {
+  const { smooth } = require('../engine.js');
+  const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const quoteData = app.slice(app.indexOf('  const BREATHING_QUOTES'), app.indexOf('  function applyLanguage('));
+  const quoteCode = app.slice(app.indexOf('  function renderBreathingQuote('), app.indexOf('  function render('));
+  let now = 0, zh = true;
+  const engine = new BreathEngine(DEFAULTS, () => now);
+  const element = { style: {}, textContent: '' };
+  const renderer = { motion: { matches: false } };
+  const context = vm.createContext({
+    engine, renderer, smooth, Math: Object.assign(Object.create(Math), { random: () => .5 }),
+    isZh: () => zh, $: () => element, setText: (_, text) => { element.textContent = text; }
+  });
+  const renderQuote = () => vm.runInContext('renderBreathingQuote(engine.snapshot());', context);
+  vm.runInContext(`${quoteData}\n${quoteCode}`, context);
+  renderQuote();
+  assert.ok(element.textContent);
+  assert.equal(element.style.opacity, '1');
+  engine.start(); renderQuote();
+  const first = element.textContent;
+  assert.equal(element.style.opacity, '0');
+  now = 450; engine.tick(); renderQuote();
+  assert.equal(Number(element.style.opacity), .5);
+  now = 6000; engine.tick(); renderQuote();
+  assert.equal(element.textContent, first); // Exhale is still the same breath.
+  assert.equal(element.style.opacity, '1');
+  now = 13550; engine.tick(); renderQuote();
+  assert.equal(Number(element.style.opacity), .5);
+  now = 14000; engine.tick(); renderQuote();
+  const second = element.textContent;
+  assert.notEqual(second, first);
+  assert.equal(engine.snapshot().cycleIndex, 1);
+  assert.equal(element.style.opacity, '0');
+  now = 14500; engine.pause(); renderQuote();
+  now += 60000; engine.tick(); renderQuote();
+  assert.equal(element.textContent, second);
+  assert.equal(element.style.opacity, '1');
+  engine.applyConfig(readConfig({ ...DEFAULTS, inhale: 8, hold: 0 })); renderQuote();
+  assert.equal(engine.snapshot().cycleIndex, 1);
+  assert.equal(element.textContent, second);
+  engine.start(); now += 13000; engine.tick(); renderQuote();
+  assert.equal(engine.snapshot().cycleIndex, 2);
+  assert.notEqual(element.textContent, second);
+  now += 42000; engine.tick(); renderQuote(); // Recover after skipped animation frames.
+  assert.equal(engine.snapshot().cycleIndex, 5);
+  zh = false; renderQuote();
+  assert.match(element.textContent, /^[A-Za-z]/);
+  renderer.motion.matches = true; renderQuote();
+  assert.equal(element.style.opacity, '1');
+  engine.reset(); renderQuote();
+  assert.equal(engine.snapshot().cycleIndex, 0);
+  assert.equal(element.style.opacity, '1');
+});
+
 function soundHarness(config = DEFAULTS, hidden = false) {
   let now = 0, timerId = 0;
   const timers = new Map(), tones = [], envelopes = [], elements = new Map();
   const engine = new BreathEngine(config, () => now);
   const context = {
     engine, audioContext: null, toneOscillator: null, toneGain: null, lastTonePhase: null,
-    raf: 0, phaseTimer: 0, settle: null, session: null,
+    raf: 0, phaseTimer: 0, settle: null, session: null, quoteCycle: -1,
     renderer: { frame: { level: 0 }, motion: { matches: true }, seedParticles() {}, setFrame() {} },
     performance: { now: () => now },
     document: { hidden, body: { dataset: {} } },
@@ -65,7 +119,7 @@ function soundHarness(config = DEFAULTS, hidden = false) {
       } }; }
     } },
     $: id => { if (!elements.has(id)) elements.set(id, { dataset: {}, setAttribute() {} }); return elements.get(id); },
-    setText() {}, phaseWord: phase => phase, tr: zh => zh, isZh: () => true,
+    setText() {}, renderBreathingQuote() {}, phaseWord: phase => phase, tr: zh => zh, isZh: () => true,
     formatClock: () => '', smooth: t => t,
     localDateKey: () => '2026-10-04', lastDate: '2026-10-04',
     completeIfNeeded() {}, requestWakeLock() {}, releaseWakeLock() {},
