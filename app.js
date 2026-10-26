@@ -113,7 +113,7 @@
     $('daily-goal').title = tr('修改每日目标', 'Edit daily goal');
     $('language-toggle').textContent = isZh() ? 'EN' : '中';
     $('language-toggle').setAttribute('aria-label', tr('切换到英文', 'Switch to Chinese')); $('language-toggle').title = tr('切换到英文', 'Switch to Chinese');
-    document.querySelector('.github-link').setAttribute('aria-label', tr('在 GitHub 上查看源码', 'View source on GitHub')); document.querySelector('.github-link').title = tr('在 GitHub 上查看源码', 'View source on GitHub');
+    document.querySelector('.studio-link').setAttribute('aria-label', tr('访问 BroYu Studio 官网', 'Visit BroYu Studio')); document.querySelector('.studio-link').title = tr('访问 BroYu Studio 官网', 'Visit BroYu Studio');
   }
   function setText(id, text) { if ($(id).textContent !== text) $(id).textContent = text; }
   function toast(text) {

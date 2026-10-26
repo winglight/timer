@@ -32,7 +32,9 @@
       gradient.addColorStop(1, 'rgba(85,175,171,0)');
       g.fillStyle = gradient; g.fillRect(0, 0, 32, 32); return c;
     }
-    get radius() { return this.size * .30 * (.80 + .20 * (this.motion.matches ? .5 : this.frame.level)); }
+    // Keep the base radius aligned with the 50% CSS core diameter.
+    get radius() { return this.size * .25 * (.80 + .20 * (this.motion.matches ? .5 : this.frame.level)); }
+    get band() { return this.size * .24; }
     resize() {
       const size = this.stage.getBoundingClientRect().width;
       if (!size) return;
@@ -46,7 +48,7 @@
     seedParticles() {
       const rand = randomGenerator(482193);
       const count = Math.min(this.maxCount, this.size > 510 ? 6200 : this.size > 400 ? 4500 : 3700);
-      const band = this.size * .18;
+      const band = this.band;
       const streams = Array.from({length: 96}, (_, i) => ({
         angle: i / 96 * TAU + (rand() - .5) * .035,
         length: .48 + rand() * .52,
@@ -78,7 +80,7 @@
     draw(dt) {
       const ctx = this.ctx, size = this.size, center = size / 2, radius = this.radius;
       const frame = this.frame;
-      const band = size * .18;
+      const band = this.band;
       const t = this.motion.matches ? 0 : frame.elapsedMs / 1000;
       const direction = frame.phase === 'inhale' ? -1 : frame.phase === 'exhale' ? 1 : 0;
       const velocity = .10 + .90 * Math.pow(Math.sin(Math.PI * clamp(frame.progress || 0)), .75);
