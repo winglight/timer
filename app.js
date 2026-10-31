@@ -84,6 +84,10 @@
     const text = (selector, value) => { const el = document.querySelector(selector); if (el) el.textContent = value; };
     text('.brand h1', tr('呼吸', 'Breathe')); text('.remaining-label', tr('剩余', 'Remaining')); text('.tagline', tr('放慢 · 感受 · 回到当下', 'Slow down · Feel · Return'));
     text('.practice-footer', tr('更平静的你 · 就在每一次呼吸里', 'A calmer you · One breath at a time')); text('.card-header h2', tr('练习日历', 'Practice calendar'));
+    text('#share-x-label', tr('分享到 X', 'Share to X'));
+    text('#share-download', tr('下载图片', 'Download image')); text('#share-open-x', tr('打开 X 发帖页', 'Open X composer'));
+    document.querySelector('.share-section').setAttribute('aria-label', tr('分享练习', 'Share practice'));
+    if (!$('share-x').disabled) $('share-status').hidden = true;
     $('all-records').childNodes[0].textContent = tr('查看全部', 'View all'); text('#today-button', tr('回到今天', 'Today')); text('.overview-header h3', tr('本月概览', 'This month'));
     (isZh() ? ['练习次数','练习天数','总时长 / 分钟'] : ['Sessions','Practice days','Minutes']).forEach((value, index) => { document.querySelectorAll('.stat-label')[index].textContent = value; });
     (isZh() ? ['一','二','三','四','五','六','日'] : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']).forEach((value, index) => { document.querySelectorAll('.calendar-table th')[index].textContent = value; });
@@ -577,6 +581,24 @@
   $('daily-goal').addEventListener('click', editDailyGoal);
   $('remaining').addEventListener('dblclick', editSessionDuration);
   $('all-records').addEventListener('click', () => openRecords());
+  $('share-x').addEventListener('click', () => {
+    window.BreathingShare.share({
+      language, month: $('month-label').textContent,
+      days: [...$('calendar-body').querySelectorAll('.day')].map(day => ({
+        label: day.textContent, outside: day.classList.contains('outside'),
+        today: day.classList.contains('today'), practiced: day.classList.contains('has-record'),
+        goalMet: day.classList.contains('goal-met'), goalMissed: day.classList.contains('goal-missed')
+      })),
+      stats: [...document.querySelectorAll('.stat')].map(stat => ({
+        value: stat.querySelector('.stat-value').textContent, label: stat.querySelector('.stat-label').textContent
+      })),
+      goal: $('daily-goal-label').textContent,
+      streak: $('streak-badge').hidden ? '' : $('streak-badge').textContent,
+      phase: $('phase-label').textContent,
+      rhythm: ['inhale-caption', 'exhale-caption', 'hold-caption'].map(id => $(id).textContent).join('  ·  '),
+      corona: $('corona'), coreRatio: renderer.size ? renderer.radius / renderer.size : .2
+    });
+  });
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' && !e.repeat && !modal && !e.target.closest('input,textarea,button,select,[contenteditable="true"]')) { e.preventDefault(); toggle(); }
   });

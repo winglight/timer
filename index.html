@@ -72,6 +72,11 @@
    <div class="stat"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span class="stat-value" id="stat-days">0</span><span class="stat-label">练习天数</span></div>
    <div class="stat"><svg class="icon" aria-hidden="true"><use href="#i-bars"/></svg><span class="stat-value" id="stat-minutes">0</span><span class="stat-label">总时长 / 分钟</span></div>
   </div></section>
+  <section class="share-section" aria-label="分享练习">
+   <button id="share-x" class="secondary share-button" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h4.5L20 21h-4.5ZM20 3 4 21"/></svg><span id="share-x-label">分享到 X</span></button>
+   <p id="share-status" class="share-status" role="status" hidden></p>
+   <div id="share-fallback" class="share-links" hidden><a id="share-download" download="breathing.png">下载图片</a><a id="share-open-x" target="_blank" rel="noopener noreferrer">打开 X 发帖页</a></div>
+  </section>
   <blockquote class="card-quote"><p>呼吸是当下的锚，<br>也是通往内心的桥。</p><footer>— 呼吸 · 更好的自己</footer></blockquote>
  </aside>
 </main>
@@ -101,6 +106,7 @@
 <noscript><p style="text-align:center;padding:20px">请启用浏览器的 JavaScript 以使用呼吸计时与练习日历。</p></noscript>
 <script src="engine.js"></script>
 <script src="corona.js"></script>
+<script src="share.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
  import { R2Sync } from './r2-sync.js';
