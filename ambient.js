@@ -89,9 +89,15 @@
  volume.addEventListener('input',()=>setVolume(volume.value));
  new MutationObserver(applyLanguage).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
  applyScene(settings.scene);
- soundSelect.value=soundNames.includes(settings.sound)?settings.sound:'off';
+ const savedSound=soundNames.includes(settings.sound)?settings.sound:'off';
+ soundSelect.value=savedSound;
  setVolume(settings.volume);
- if(soundSelect.value!=='off'){soundSelect.value='off';settings.sound='off';save();}
+ if(savedSound!=='off'){
+  // Browsers block autoplay: restore the selection, then resume on the first user gesture.
+  const resume=()=>{document.removeEventListener('pointerdown',resume);document.removeEventListener('keydown',resume);startSound(savedSound).catch(()=>{soundSelect.value='off';});};
+  document.addEventListener('pointerdown',resume,{once:true});
+  document.addEventListener('keydown',resume,{once:true});
+ }
  applyLanguage();
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&context&&context.state==='running')context.suspend();else if(!document.hidden&&activeSound!=='off'&&context?.state==='suspended')context.resume();});
 })();
