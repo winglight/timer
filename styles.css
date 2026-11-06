@@ -292,3 +292,7 @@ body[data-scene]:not([data-scene="none"]) .ambience-panel { background:rgba(249,
  .volume-wrap { gap:5px; }
 }
 @media(prefers-reduced-motion:reduce) { .ambient-world,.ambient-world * { animation:none!important;transition:none!important; } }
+
+/* Keep the scenery behind the interface but above the page canvas. */
+.ambient-world { z-index:0; }
+.app { position:relative; z-index:1; }
