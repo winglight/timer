@@ -49,6 +49,29 @@
    <div class="header-actions"><div class="remaining-group"><span class="remaining-label">剩余</span><span id="remaining" role="timer" aria-label="练习剩余时间">10:00</span></div><span class="header-divider" aria-hidden="true"></span><button id="language-toggle" class="language-button" type="button" aria-label="Switch to English" title="Switch to English">EN</button><button id="settings-open" class="icon-button" type="button" aria-label="练习设置" title="练习设置"><svg class="icon"><use href="#i-settings"/></svg></button></div>
   </header>
   <p class="tagline">放慢 · 感受 · 回到当下</p>
+  <section class="ambience-panel" aria-label="沉浸式环境">
+   <div class="ambience-group scene-group">
+    <div class="ambience-heading"><span class="ambience-kicker">ATMOSPHERE</span><span class="ambience-title" data-zh="环境场景" data-en="Atmosphere">环境场景</span></div>
+    <div class="ambience-options" role="group" aria-label="背景场景">
+     <button class="ambience-chip is-active" type="button" data-scene="none"><span class="chip-icon">◌</span><span data-zh="关闭" data-en="Off">关闭</span></button>
+     <button class="ambience-chip" type="button" data-scene="sunset"><span class="chip-icon">☼</span><span data-zh="日落黄昏" data-en="Sunset">日落黄昏</span></button>
+     <button class="ambience-chip" type="button" data-scene="ocean"><span class="chip-icon">≈</span><span data-zh="海边沙滩" data-en="Ocean">海边沙滩</span></button>
+     <button class="ambience-chip" type="button" data-scene="mountain"><span class="chip-icon">⌁</span><span data-zh="云海山顶" data-en="Mountain">云海山顶</span></button>
+     <button class="ambience-chip" type="button" data-scene="cabin"><span class="chip-icon">⌂</span><span data-zh="林中小屋" data-en="Forest cabin">林中小屋</span></button>
+    </div>
+   </div>
+   <div class="ambience-divider"></div>
+   <div class="ambience-group sound-group">
+    <div class="ambience-heading"><span class="ambience-kicker">SOUNDSCAPE</span><span class="ambience-title" data-zh="自然白噪音" data-en="Nature sounds">自然白噪音</span></div>
+    <div class="sound-controls">
+     <label class="sound-select-wrap"><span class="sr-only" data-zh="选择环境声音" data-en="Choose ambient sound">选择环境声音</span><select id="ambient-sound" aria-label="选择环境声音">
+      <option value="off">关闭声音</option><option value="rain">细雨</option><option value="ocean">海浪</option><option value="forest">森林鸟鸣</option><option value="wind">山间微风</option><option value="fire">篝火</option><option value="white">白噪音</option><option value="pink">粉红噪音</option>
+     </select></label>
+     <label class="volume-wrap"><span class="sr-only" data-zh="音量" data-en="Volume">音量</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Zm12-2a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/></svg><input id="ambient-volume" type="range" min="0" max="100" value="32" aria-label="环境音量"><output id="ambient-volume-value" for="ambient-volume">32%</output></label>
+    </div>
+   </div>
+  </section>
+  <div class="ambient-world scene-none" id="ambient-world" aria-hidden="true"><span class="ambient-sun"></span><span class="ambient-cloud ambient-cloud-a"></span><span class="ambient-cloud ambient-cloud-b"></span><span class="ambient-horizon"></span><span class="ambient-foreground"></span><span class="ambient-cabin"></span></div>
   <div class="breathing-area">
    <p class="breathing-quote" id="breathing-quote"></p>
    <div class="stage" id="stage" aria-label="呼吸引导">
@@ -106,6 +129,7 @@
 <noscript><p style="text-align:center;padding:20px">请启用浏览器的 JavaScript 以使用呼吸计时与练习日历。</p></noscript>
 <script src="engine.js"></script>
 <script src="corona.js"></script>
+<script src="ambient.js"></script>
 <script src="share.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
