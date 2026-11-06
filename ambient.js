@@ -62,7 +62,7 @@
   source.connect(filter);filter.connect(master);master.connect(context.destination);
   if(['ocean','wind','rain','fire'].includes(kind)){
    lfo=context.createOscillator();lfo.type='sine';lfo.frequency.value=kind==='ocean'?.085:kind==='wind'?.045:kind==='fire'?.7:.19;
-   lfoGain=context.createGain();lfoGain.gain.value=kind==='fire'?.055:.11;
+   lfoGain=context.createGain();lfoGain.gain.value=(Number(volume.value)/100)*(kind==='fire'?.055:.11);
    lfo.connect(lfoGain);lfoGain.connect(master.gain);lfo.start();
   }
   source.start();activeSound=kind;settings.sound=kind;save();
@@ -71,6 +71,7 @@
   const n=Math.max(0,Math.min(100,Number(value)||0));settings.volume=n;
   volume.value=String(n);volumeValue.value=n+'%';volumeValue.textContent=n+'%';
   if(master)master.gain.setTargetAtTime(n/100*.22,context.currentTime,.08);
+  if(lfoGain)lfoGain.gain.setTargetAtTime(n/100*(activeSound==='fire'?.055:.11),context.currentTime,.08);
   save();
  }
  function applyLanguage(){
