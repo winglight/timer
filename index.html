@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="r2-config.css">
 </head>
 <body data-status="idle">
+<div class="ambient-world scene-none" id="ambient-world" aria-hidden="true"><span class="ambient-sun"></span><span class="ambient-cloud ambient-cloud-a"></span><span class="ambient-cloud ambient-cloud-b"></span><span class="ambient-horizon"></span><span class="ambient-foreground"></span><span class="ambient-cabin"></span></div>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M5 3v5m0 4v9M12 3v11m0 4v3M19 3v3m0 4v11"/><path d="M2 8h6v4H2zM9 14h6v4H9zM16 6h6v4h-6z"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 9A8 8 0 1 1 4 14M4.5 4v5H10"/></symbol>
@@ -46,32 +47,34 @@
  <section class="practice" aria-label="呼吸练习">
   <header class="header">
    <div class="brand"><svg viewBox="0 0 42 36" aria-hidden="true"><path d="M2 22c8 0 8-16 14-16s8 25 15 25c5 0 6-10 10-10"/></svg><h1>呼吸</h1></div>
-   <div class="header-actions"><div class="remaining-group"><span class="remaining-label">剩余</span><span id="remaining" role="timer" aria-label="练习剩余时间">10:00</span></div><span class="header-divider" aria-hidden="true"></span><button id="language-toggle" class="language-button" type="button" aria-label="Switch to English" title="Switch to English">EN</button><button id="settings-open" class="icon-button" type="button" aria-label="练习设置" title="练习设置"><svg class="icon"><use href="#i-settings"/></svg></button></div>
+   <div class="header-actions">
+    <div class="remaining-group"><span class="remaining-label">剩余</span><span id="remaining" role="timer" aria-label="练习剩余时间">10:00</span></div>
+    <span class="header-divider" aria-hidden="true"></span>
+    <details class="ambience-menu" id="scene-menu">
+     <summary aria-label="环境场景"><span class="menu-symbol" aria-hidden="true">◌</span><span class="menu-name" data-zh="场景" data-en="Scene">场景</span><span class="menu-current" id="scene-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
+     <div class="ambience-popover"><p class="menu-kicker">ATMOSPHERE</p><div class="scene-options" role="group" aria-label="背景场景">
+       <button type="button" class="scene-choice" data-scene="none"><span>◌</span><span data-zh="关闭背景" data-en="Off">关闭背景</span></button>
+       <button type="button" class="scene-choice" data-scene="sunset"><span>☼</span><span data-zh="日落黄昏" data-en="Sunset dusk">日落黄昏</span></button>
+       <button type="button" class="scene-choice" data-scene="ocean"><span>≈</span><span data-zh="海边沙滩" data-en="Ocean beach">海边沙滩</span></button>
+       <button type="button" class="scene-choice" data-scene="mountain"><span>⌁</span><span data-zh="云海山顶" data-en="Cloud mountain">云海山顶</span></button>
+       <button type="button" class="scene-choice" data-scene="cabin"><span>⌂</span><span data-zh="林中小屋" data-en="Forest cabin">林中小屋</span></button>
+      </div></div>
+    </details>
+    <details class="ambience-menu" id="sound-menu">
+     <summary aria-label="环境声音"><span class="menu-symbol" aria-hidden="true">♫</span><span class="menu-name" data-zh="声音" data-en="Sound">声音</span><span class="menu-current" id="sound-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
+     <div class="ambience-popover sound-popover"><p class="menu-kicker">SOUNDSCAPE</p>
+      <label class="sound-select-label"><span data-zh="环境音" data-en="Ambient sound">环境音</span><select id="ambient-sound" aria-label="选择环境声音">
+       <option value="off">关闭声音</option><option value="rain">细雨</option><option value="ocean">海浪</option><option value="forest">森林鸟鸣</option><option value="wind">山间微风</option><option value="fire">篝火</option><option value="white">白噪音</option><option value="pink">粉红噪音</option>
+      </select></label>
+      <label class="volume-wrap"><span data-zh="音量" data-en="Volume">音量</span><input id="ambient-volume" type="range" min="0" max="100" value="32" aria-label="环境音量"><output id="ambient-volume-value" for="ambient-volume">32%</output></label>
+     </div>
+    </details>
+    <button id="language-toggle" class="language-button" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+    <button id="settings-open" class="icon-button" type="button" aria-label="练习设置" title="练习设置"><svg class="icon"><use href="#i-settings"/></svg></button>
+   </div>
   </header>
   <p class="tagline">放慢 · 感受 · 回到当下</p>
-  <section class="ambience-panel" aria-label="沉浸式环境">
-   <div class="ambience-group scene-group">
-    <div class="ambience-heading"><span class="ambience-kicker">ATMOSPHERE</span><span class="ambience-title" data-zh="环境场景" data-en="Atmosphere">环境场景</span></div>
-    <div class="ambience-options" role="group" aria-label="背景场景">
-     <button class="ambience-chip is-active" type="button" data-scene="none"><span class="chip-icon">◌</span><span data-zh="关闭" data-en="Off">关闭</span></button>
-     <button class="ambience-chip" type="button" data-scene="sunset"><span class="chip-icon">☼</span><span data-zh="日落黄昏" data-en="Sunset">日落黄昏</span></button>
-     <button class="ambience-chip" type="button" data-scene="ocean"><span class="chip-icon">≈</span><span data-zh="海边沙滩" data-en="Ocean">海边沙滩</span></button>
-     <button class="ambience-chip" type="button" data-scene="mountain"><span class="chip-icon">⌁</span><span data-zh="云海山顶" data-en="Mountain">云海山顶</span></button>
-     <button class="ambience-chip" type="button" data-scene="cabin"><span class="chip-icon">⌂</span><span data-zh="林中小屋" data-en="Forest cabin">林中小屋</span></button>
-    </div>
-   </div>
-   <div class="ambience-divider"></div>
-   <div class="ambience-group sound-group">
-    <div class="ambience-heading"><span class="ambience-kicker">SOUNDSCAPE</span><span class="ambience-title" data-zh="自然白噪音" data-en="Nature sounds">自然白噪音</span></div>
-    <div class="sound-controls">
-     <label class="sound-select-wrap"><span class="sr-only" data-zh="选择环境声音" data-en="Choose ambient sound">选择环境声音</span><select id="ambient-sound" aria-label="选择环境声音">
-      <option value="off">关闭声音</option><option value="rain">细雨</option><option value="ocean">海浪</option><option value="forest">森林鸟鸣</option><option value="wind">山间微风</option><option value="fire">篝火</option><option value="white">白噪音</option><option value="pink">粉红噪音</option>
-     </select></label>
-     <label class="volume-wrap"><span class="sr-only" data-zh="音量" data-en="Volume">音量</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Zm12-2a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/></svg><input id="ambient-volume" type="range" min="0" max="100" value="32" aria-label="环境音量"><output id="ambient-volume-value" for="ambient-volume">32%</output></label>
-    </div>
-   </div>
-  </section>
-  <div class="ambient-world scene-none" id="ambient-world" aria-hidden="true"><span class="ambient-sun"></span><span class="ambient-cloud ambient-cloud-a"></span><span class="ambient-cloud ambient-cloud-b"></span><span class="ambient-horizon"></span><span class="ambient-foreground"></span><span class="ambient-cabin"></span></div>
+
   <div class="breathing-area">
    <p class="breathing-quote" id="breathing-quote"></p>
    <div class="stage" id="stage" aria-label="呼吸引导">
