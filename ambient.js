@@ -11,7 +11,7 @@
  const scenes=['none','sunset','ocean','mountain','cabin'];
  const soundNames=['off','rain','ocean','forest','wind','fire','white','pink'];
  const sceneButtons=[...document.querySelectorAll('[data-scene]')];
- let context=null, source=null, master=null, filter=null, lfo=null, lfoGain=null, buffer=null, activeSound='off';
+ let context=null, source=null, master=null, filter=null, lfo=null, lfoGain=null, buffer=null, bufferKind=null, activeSound='off';
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
  function save(){try{localStorage.setItem(KEY,JSON.stringify(settings));}catch(_){}}
  function applyScene(value){
@@ -54,7 +54,7 @@
   if(!context)context=new Audio({latencyHint:'playback'});
   await context.resume();
   stopSound();
-  if(!buffer||buffer.sampleRate!==context.sampleRate)buffer=makeNoise(context,kind);
+  if(!buffer||buffer.sampleRate!==context.sampleRate||bufferKind!==kind){buffer=makeNoise(context,kind);bufferKind=kind;}
   source=context.createBufferSource();source.buffer=buffer;source.loop=true;
   filter=context.createBiquadFilter();filter.type=kind==='fire'?'highpass':kind==='white'?'allpass':'lowpass';
   filter.frequency.value=kind==='rain'?4200:kind==='forest'?3600:kind==='fire'?1800:kind==='wind'?850:kind==='ocean'?700:kind==='pink'?1200:18000;
