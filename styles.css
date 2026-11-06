@@ -284,5 +284,5 @@ body.modal-open { overflow: hidden; }
 .volume-wrap input{flex:1;min-width:60px;accent-color:#679d89}
 .volume-wrap output{min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:600px){.header-actions{gap:5px}.ambience-menu>summary{min-height:34px;gap:4px;padding:0 7px;font-size:10px}.menu-current,.menu-chevron{display:none}.menu-symbol{font-size:14px}.ambience-popover{right:-40px}.remaining-group{gap:5px}}
-@media(max-width:380px){.header{gap:5px}.brand{gap:7px}.brand svg{width:31px}h1{font-size:21px}.header-actions{gap:3px}.header-divider{display:none}.remaining-label{display:none}.header-actions .icon-button{width:36px;height:38px}.language-button{min-width:32px;height:32px;padding:0 5px}}
+@media(max-width:380px){.header{gap:5px}.brand{gap:7px}.brand svg{width:31px}h1{font-size:21px}.header-actions{gap:3px}.header-divider{display:none}.remaining-label{display:none}.menu-name{display:none}.ambience-menu>summary{min-width:32px;justify-content:center}.header-actions .icon-button{width:36px;height:38px}.language-button{min-width:32px;height:32px;padding:0 5px}}
 @media(prefers-reduced-motion:reduce){.ambient-world,.ambient-world *{animation:none!important;transition:none!important}}
