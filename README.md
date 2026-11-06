@@ -1,26 +1,43 @@
 # Timer
 
-这是一个带粒子呼吸引导、练习记录和云同步的呼吸练习计时器。
+A calm, browser-based breathing practice timer with particle guidance, practice history, optional cloud sync, immersive animated scenes, and ambient soundscapes.
 
-## Demo
+## Live demo
 
-在线演示地址：[https://timer.broyustudio.com/](https://timer.broyustudio.com/)
+https://timer.broyustudio.com/
 
-## 功能
+## Features
 
-- 自定义吸气、呼气、吸气与呼气后停留和练习总时长
-- 清晰圆形与粒子日冕视觉引导，支持减少动态效果
-- 呼吸阶段声音提示、暂停/继续、提前结束保存和屏幕唤醒锁
-- 练习日历、月度统计、连续天数、每日目标、记录查看和 JSON 导出
-- 分享到 X：把呼吸圆圈、当前月历、统计和网站链接生成高清 PNG，复制到剪贴板并打开 X 发帖页；粘贴图片后自行发布，复制不可用时可下载图片上传
-- 浏览器本地持久化，并兼容旧版 `breath_settings` / `breath_history` 数据
-- 可选 R2 设置与练习记录同步，支持旧云端实体迁移合并
-- 中英文界面（默认跟随浏览器，可在页头切换并记住选择）和桌面/移动端响应式布局
+- Configure inhale, exhale, hold, and total session duration
+- Follow a breathing orb surrounded by a fine-particle corona
+- Reduced-motion support, phase cues, pause/resume, early finish, and screen wake lock
+- Practice calendar, monthly statistics, streaks, daily goals, session details, and JSON export
+- Share a high-resolution practice snapshot to X
+- Browser-local persistence with migration from legacy breath_settings and breath_history data
+- Optional Cloudflare R2 synchronization for settings and practice history
+- Four optional animated ambience scenes: sunset dusk, ocean beach, cloud mountain, and forest cabin
+- Procedural ambient soundscapes: rain, ocean waves, forest birds, mountain wind, fireplace, white noise, and pink noise
+- Independent scene and sound controls, volume adjustment, and saved preferences
+- English and Simplified Chinese UI; responsive desktop and mobile layouts
 
-页面代码按职责拆分为 `engine.js`（计时模型）、`corona.js`（粒子渲染）、`app.js`（交互、记录、声音和同步）以及 `styles.css`（视觉与响应式样式）。
+## Project structure
 
-## 验证
+The app uses vanilla HTML, CSS, and JavaScript.
 
-```sh
-node --test tests/*.test.cjs
-```
+- index.html — application structure
+- engine.js — deterministic breathing timer model
+- corona.js — particle corona renderer
+- app.js — UI interactions, session history, cues, calendar, and sync
+- ambient.js — ambience scene selection and Web Audio sound generation
+- share.js — practice snapshot generation and sharing
+- styles.css — visual design, ambience, and responsive layout
+
+## Development and tests
+
+Run the existing test suite with:
+
+    node --test tests/*.test.cjs
+
+## Language
+
+English is the default repository README. See [简体中文](README.zh-CN.md) for the Chinese documentation.
