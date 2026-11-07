@@ -11,7 +11,14 @@
 <link rel="stylesheet" href="r2-config.css">
 </head>
 <body data-status="idle">
-<div class="ambient-world scene-none" id="ambient-world" aria-hidden="true"><span class="ambient-sun"></span><span class="ambient-cloud ambient-cloud-a"></span><span class="ambient-cloud ambient-cloud-b"></span><span class="ambient-horizon"></span><span class="ambient-foreground"></span><span class="ambient-cabin"></span></div>
+<div class="ambient-world" id="ambient-world" data-scene="none" aria-hidden="true">
+ <div class="scene-layer" data-scene-layer="sunset"><img src="https://images.unsplash.com/photo-1699145748716-6ae58de1400d?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="ocean"><img src="https://images.unsplash.com/photo-1620989205499-9f5efe55e5ad?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="mountain"><img src="https://images.unsplash.com/photo-1772089003225-6eccf98ddbf9?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="cabin"><img src="https://images.unsplash.com/photo-1772955543023-a6e99819e161?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-motion scene-water"></div><div class="scene-motion scene-mist"></div><div class="scene-motion scene-warmth"></div>
+ <div class="scene-shade"></div>
+</div>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M5 3v5m0 4v9M12 3v11m0 4v3M19 3v3m0 4v11"/><path d="M2 8h6v4H2zM9 14h6v4H9zM16 6h6v4h-6z"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 9A8 8 0 1 1 4 14M4.5 4v5H10"/></symbol>
@@ -51,22 +58,28 @@
     <div class="remaining-group"><span class="remaining-label">剩余</span><span id="remaining" role="timer" aria-label="练习剩余时间">10:00</span></div>
     <span class="header-divider" aria-hidden="true"></span>
     <details class="ambience-menu" id="scene-menu">
-     <summary aria-label="环境场景"><span class="menu-symbol" aria-hidden="true">◌</span><span class="menu-name" data-zh="场景" data-en="Scene">场景</span><span class="menu-current" id="scene-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
-     <div class="ambience-popover"><p class="menu-kicker">ATMOSPHERE</p><div class="scene-options" role="group" aria-label="背景场景">
-       <button type="button" class="scene-choice" data-scene="none"><span>◌</span><span data-zh="关闭背景" data-en="Off">关闭背景</span></button>
-       <button type="button" class="scene-choice" data-scene="sunset"><span>☼</span><span data-zh="日落黄昏" data-en="Sunset dusk">日落黄昏</span></button>
-       <button type="button" class="scene-choice" data-scene="ocean"><span>≈</span><span data-zh="海边沙滩" data-en="Ocean beach">海边沙滩</span></button>
-       <button type="button" class="scene-choice" data-scene="mountain"><span>⌁</span><span data-zh="云海山顶" data-en="Cloud mountain">云海山顶</span></button>
-       <button type="button" class="scene-choice" data-scene="cabin"><span>⌂</span><span data-zh="林中小屋" data-en="Forest cabin">林中小屋</span></button>
-      </div></div>
+     <summary aria-label="环境场景"><span class="menu-symbol" aria-hidden="true">▧</span><span class="menu-name" data-zh="场景" data-en="Scene">场景</span><span class="menu-current" id="scene-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
+     <div class="ambience-popover scene-popover"><p class="menu-kicker" data-zh="选择一个安静的地方" data-en="CHOOSE YOUR PLACE">选择一个安静的地方</p>
+      <div class="scene-options" role="group" aria-label="背景场景">
+       <button type="button" class="scene-choice" data-scene="none"><span class="scene-thumb scene-thumb-off">◌</span><span data-zh="关闭背景" data-en="Off">关闭背景</span></button>
+       <button type="button" class="scene-choice" data-scene="sunset"><img class="scene-thumb" src="https://images.unsplash.com/photo-1699145748716-6ae58de1400d?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="日落湖畔" data-en="Sunset lake">日落湖畔</span></button>
+       <button type="button" class="scene-choice" data-scene="ocean"><img class="scene-thumb" src="https://images.unsplash.com/photo-1620989205499-9f5efe55e5ad?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="海浪与晚霞" data-en="Ocean at dusk">海浪与晚霞</span></button>
+       <button type="button" class="scene-choice" data-scene="mountain"><img class="scene-thumb" src="https://images.unsplash.com/photo-1772089003225-6eccf98ddbf9?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="云海山顶" data-en="Sea of clouds">云海山顶</span></button>
+       <button type="button" class="scene-choice" data-scene="cabin"><img class="scene-thumb" src="https://images.unsplash.com/photo-1772955543023-a6e99819e161?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="雨夜林中小屋" data-en="Forest cabin">雨夜林中小屋</span></button>
+      </div>
+     </div>
     </details>
     <details class="ambience-menu" id="sound-menu">
-     <summary aria-label="环境声音"><span class="menu-symbol" aria-hidden="true">♫</span><span class="menu-name" data-zh="声音" data-en="Sound">声音</span><span class="menu-current" id="sound-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
-     <div class="ambience-popover sound-popover"><p class="menu-kicker">SOUNDSCAPE</p>
-      <label class="sound-select-label"><span data-zh="环境音" data-en="Ambient sound">环境音</span><select id="ambient-sound" aria-label="选择环境声音">
-       <option value="off">关闭声音</option><option value="rain">细雨</option><option value="ocean">海浪</option><option value="forest">森林鸟鸣</option><option value="wind">山间微风</option><option value="fire">篝火</option><option value="white">白噪音</option><option value="pink">粉红噪音</option>
-      </select></label>
-      <label class="volume-wrap"><span data-zh="音量" data-en="Volume">音量</span><input id="ambient-volume" type="range" min="0" max="100" value="32" aria-label="环境音量"><output id="ambient-volume-value" for="ambient-volume">32%</output></label>
+     <summary aria-label="环境声音"><span class="menu-symbol" aria-hidden="true">♫</span><span class="menu-name" data-zh="环境声" data-en="Sound">环境声</span><span class="menu-current" id="sound-current">关闭</span><span class="menu-chevron" aria-hidden="true">⌄</span></summary>
+     <div class="ambience-popover sound-popover"><p class="menu-kicker" data-zh="真实自然录音" data-en="NATURAL FIELD RECORDINGS">真实自然录音</p>
+      <div class="sound-options" role="group" aria-label="自然环境声音">
+       <button type="button" class="sound-choice" data-sound="off"><span class="sound-icon">◌</span><span class="sound-copy"><span data-zh="关闭声音" data-en="Silence">关闭声音</span><small data-zh="保持安静" data-en="No background audio">保持安静</small></span><span class="sound-state">关闭</span></button>
+       <button type="button" class="sound-choice" data-sound="ocean"><span class="sound-icon">≈</span><span class="sound-copy"><span data-zh="海浪轻拍沙滩" data-en="Gentle ocean waves">海浪轻拍沙滩</span><small data-zh="海岸实地录音 · 2 分钟" data-en="Coastal field recording · 2 min">海岸实地录音 · 2 分钟</small></span><span class="sound-state">试听</span></button>
+       <button type="button" class="sound-choice" data-sound="rain"><span class="sound-icon">☂</span><span class="sound-copy"><span data-zh="轻柔雨声" data-en="Soft rainfall">轻柔雨声</span><small data-zh="自然降雨录音 · 1 分钟" data-en="Natural rainfall · 1 min">自然降雨录音 · 1 分钟</small></span><span class="sound-state">试听</span></button>
+       <button type="button" class="sound-choice" data-sound="birds"><span class="sound-icon">♬</span><span class="sound-copy"><span data-zh="清晨林间鸟鸣" data-en="Morning forest birds">清晨林间鸟鸣</span><small data-zh="林缘晨间录音 · 7 分钟" data-en="Forest-edge dawn recording · 7 min">林缘晨间录音 · 7 分钟</small></span><span class="sound-state">试听</span></button>
+      </div>
+      <div class="sound-foot"><label for="ambient-volume" data-zh="音量" data-en="Volume">音量</label><input id="ambient-volume" type="range" min="0" max="100" value="24" aria-label="环境音量"><output id="ambient-volume-value" for="ambient-volume">24%</output></div>
+      <p class="audio-credits"><span data-zh="录音署名：" data-en="Audio credits:">录音署名：</span><a href="https://commons.wikimedia.org/wiki/File:Oceanwavescrushing.ogg" target="_blank" rel="noopener noreferrer">Luftrum · CC BY 3.0</a> · <a href="https://commons.wikimedia.org/wiki/File:Sound_of_light_rainfall.ogg" target="_blank" rel="noopener noreferrer">Mijesty · CC BY-SA 4.0</a> · <a href="https://commons.wikimedia.org/wiki/File:Birdsong_morning_01.ogg" target="_blank" rel="noopener noreferrer">Martin Thurnherr · CC BY-SA 4.0</a></p>
      </div>
     </details>
     <button id="language-toggle" class="language-button" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
