@@ -15,10 +15,17 @@ https://timer.broyustudio.com/
 - Share a high-resolution practice snapshot to X
 - Browser-local persistence with migration from legacy breath_settings and breath_history data
 - Optional Cloudflare R2 synchronization for settings and practice history
-- Four optional animated ambience scenes: sunset dusk, ocean beach, cloud mountain, and forest cabin
-- Procedural ambient soundscapes: rain, ocean waves, forest birds, mountain wind, fireplace, white noise, and pink noise
-- Independent scene and sound controls, volume adjustment, and saved preferences
+- Four photographic ambience scenes: sunset lake, ocean at dusk, sea of clouds, and a forest cabin
+- Slow camera drift and subtle scene-specific motion, with a dedicated off state
+- Real field recordings for ocean waves, soft rainfall, and morning birdsong; no synthesized noise
+- Independent one-click scene and sound pickers, volume adjustment, and saved preferences (audio requires a user gesture after reload)
 - English and Simplified Chinese UI; responsive desktop and mobile layouts
+
+## Media credits
+
+Background photographs are served from Unsplash under the Unsplash License: Raffaele Landi (sunset lake), Anja de Necker (ocean at dusk), ki Zhang (mountain cloud sea), and Gadiel Lazcano (forest cabin).
+
+Ambient recordings are served from Wikimedia Commons: [Oceanwavescrushing.ogg](https://commons.wikimedia.org/wiki/File:Oceanwavescrushing.ogg) by Luftrum (CC BY 3.0), [Sound of light rainfall.ogg](https://commons.wikimedia.org/wiki/File:Sound_of_light_rainfall.ogg) by Mijesty (CC BY-SA 4.0), and [Birdsong morning 01.ogg](https://commons.wikimedia.org/wiki/File:Birdsong_morning_01.ogg) by Martin Thurnherr (CC BY-SA 4.0).
 
 ## Project structure
 
