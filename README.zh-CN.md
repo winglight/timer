@@ -15,10 +15,17 @@ https://timer.broyustudio.com/
 - 生成高清练习快照并分享到 X
 - 浏览器本地持久化，并兼容旧版 breath_settings / breath_history 数据
 - 可选 Cloudflare R2 设置与练习记录同步
-- 四种可选动态环境：日落黄昏、海边沙滩、云海山顶、林中小屋
-- 程序化生成自然环境音：细雨、海浪、森林鸟鸣、山间微风、篝火、白噪音和粉红噪音
-- 场景和声音独立控制，支持音量调节和偏好记忆
+- 四种真实摄影场景：日落湖畔、海浪与晚霞、云海山顶、雨夜林中小屋
+- 缓慢镜头移动及轻微的场景动态效果，可独立关闭背景
+- 使用真实自然录音：海浪、轻柔雨声和清晨林间鸟鸣，不再用随机噪声模拟自然声音
+- 场景和声音使用独立的一层菜单，点击即可切换；支持音量调节和偏好记忆。刷新后记住所选录音，但遵守浏览器限制，不自动播放
 - 中英文界面，适配桌面和移动端
+
+## 媒体来源与授权
+
+背景摄影来自 Unsplash License：Raffaele Landi（日落湖畔）、Anja de Necker（海边晚霞）、ki Zhang（云海山顶）、Gadiel Lazcano（林中小屋）。
+
+自然录音来自 Wikimedia Commons：[Oceanwavescrushing.ogg](https://commons.wikimedia.org/wiki/File:Oceanwavescrushing.ogg)，作者 Luftrum，CC BY 3.0；[Sound of light rainfall.ogg](https://commons.wikimedia.org/wiki/File:Sound_of_light_rainfall.ogg)，作者 Mijesty，CC BY-SA 4.0；[Birdsong morning 01.ogg](https://commons.wikimedia.org/wiki/File:Birdsong_morning_01.ogg)，作者 Martin Thurnherr，CC BY-SA 4.0。
 
 ## 项目结构
 
