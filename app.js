@@ -302,14 +302,19 @@
     if (frame.status === 'running' && tonePhase !== lastTonePhase && playTone(frame.phase)) lastTonePhase = tonePhase;
     setText('phase-label', word); setText('phase-live', word);
     const isActive = frame.status === 'running' || frame.status === 'paused';
-    $('phase-seconds').hidden = !(engine.config.showCountdown && isActive);
+    const hideSeconds = !(engine.config.showCountdown && isActive);
+    if ($('phase-seconds').hidden !== hideSeconds) $('phase-seconds').hidden = hideSeconds;
     if (isActive) setText('phase-seconds', `${Math.max(1, Math.ceil(frame.duration * (1 - frame.progress)))}${tr(' 秒', 's')}`);
     setText('remaining', formatClock(frame.remainingMs));
     setText('toggle-label', (isZh() ? { idle: '开始练习', running: '暂停', paused: '继续练习', complete: '再次开始' } : { idle: 'Start', running: 'Pause', paused: 'Resume', complete: 'Start again' })[frame.status]);
-    $('toggle-icon').setAttribute('href', frame.status === 'running' ? '#i-pause' : '#i-play');
-    $('reset').disabled = frame.status === 'idle';
-    document.body.dataset.status = frame.status;
-    $('stage').dataset.phase = frame.phase;
+    const icon = frame.status === 'running' ? '#i-pause' : '#i-play';
+    if ($('toggle-icon').getAttribute('href') !== icon) $('toggle-icon').setAttribute('href', icon);
+    const disableReset = frame.status === 'idle';
+    if ($('reset').disabled !== disableReset) $('reset').disabled = disableReset;
+    // These attributes control page-wide CSS. Do not trigger a style invalidation
+    // on every animation frame when the breathing state has not actually changed.
+    if (document.body.dataset.status !== frame.status) document.body.dataset.status = frame.status;
+    if ($('stage').dataset.phase !== frame.phase) $('stage').dataset.phase = frame.phase;
     if (lastDate !== localDateKey()) { lastDate = localDateKey(); renderCalendar(); }
   }
   function loop(now) {

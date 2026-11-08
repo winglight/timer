@@ -238,8 +238,8 @@ body.modal-open { overflow: hidden; }
 .ambient-world.is-visible{opacity:1;visibility:visible}
 .scene-layer{position:absolute;inset:-2.5%;opacity:0;transition:opacity 1.2s ease;overflow:hidden}
 .scene-layer.active{opacity:1}
-.scene-layer img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.035);filter:saturate(.92) contrast(1.02);will-change:transform}
-.scene-layer.active img{animation:scene-camera-drift 70s ease-in-out infinite alternate}
+.scene-layer img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.035);filter:saturate(.92) contrast(1.02)}
+.scene-layer.active img{animation:scene-camera-drift 70s ease-in-out infinite alternate;will-change:transform}
 .scene-layer[data-scene-layer="sunset"]{background:linear-gradient(135deg,#364657,#e5a27f 55%,#384c50)}
 .scene-layer[data-scene-layer="ocean"]{background:linear-gradient(180deg,#9abac3,#d7a58a 55%,#245767)}
 .scene-layer[data-scene-layer="mountain"]{background:linear-gradient(180deg,#9eb9ca,#d9e4e0 48%,#536b6c)}
@@ -254,9 +254,9 @@ body.modal-open { overflow: hidden; }
 .ambient-world[data-scene="mountain"] .scene-mist{opacity:.55}
 .ambient-world[data-scene="ocean"] .scene-water{opacity:.65}
 @keyframes scene-camera-drift{from{transform:scale(1.035) translate3d(-.5%,.25%,0)}to{transform:scale(1.105) translate3d(.65%,-.45%,0)}}
-@keyframes scene-water-shimmer{from{background-position:0 0;transform:translateX(-1%)}to{background-position:100% 0;transform:translateX(1%)}}
-@keyframes scene-mist-drift{from{transform:translate3d(-3%,1%,0);opacity:.3}to{transform:translate3d(4%,-1%,0);opacity:.8}}
-@keyframes scene-warm-glow{from{opacity:.28}to{opacity:.82}}
+@keyframes scene-water-shimmer{from{transform:translate3d(-1%,0,0)}to{transform:translate3d(1%,0,0)}}
+@keyframes scene-mist-drift{from{transform:translate3d(-3%,1%,0)}to{transform:translate3d(4%,-1%,0)}}
+@keyframes scene-warm-glow{from{transform:translate3d(-1%,0,0) scale(1)}to{transform:translate3d(1%,0,0) scale(1.03)}}
 
 /* Top-bar pickers. Each click selects or plays directly; no nested select controls. */
 .app{position:relative;z-index:2}
@@ -325,3 +325,17 @@ body.modal-open { overflow: hidden; }
 .practice-footer{color:rgba(235,246,239,.76)}.practice-footer:before{background:rgba(215,240,225,.55)}
 .tagline{color:#d4e9df;text-shadow:0 2px 12px rgba(0,0,0,.25)}
 @media(prefers-reduced-motion:reduce){.scene-layer.active img,.scene-motion,.ambient-world{animation:none!important;transition:none!important}}
+
+/* Keep the scenery visible through the orb only when a photo scene is selected.
+   The phase label is in its own layer and therefore remains fully opaque. */
+body:not([data-scene="none"]) .orb-core {
+  background: radial-gradient(circle at 27% 23%, rgba(229, 247, 231, .57) 0%, rgba(196, 234, 224, .48) 34%, rgba(150, 215, 212, .37) 70%, rgba(118, 197, 205, .32) 100%);
+  border-color: rgba(244, 255, 249, .58);
+}
+
+/* An active or paused practice is intentionally distraction-free. Hiding the
+   entire aside also removes its costly full-panel backdrop blur from the scene. */
+body:is([data-status="running"], [data-status="paused"]) .calendar-card { display: none; }
+@media (min-width: 1100px) {
+  body:is([data-status="running"], [data-status="paused"]) .app { grid-template-columns: minmax(0, 1fr); }
+}

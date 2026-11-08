@@ -69,11 +69,18 @@
       this.frame = { ...frame, level: clamp(frame.level || 0) };
       const level = this.motion.matches ? .5 : this.frame.level;
       this.core.style.transform = `translate(-50%, -50%) scale(${(.80 + .20 * level).toFixed(5)})`;
-      let dt = Math.max(0, (frame.elapsedMs - this.lastElapsed) / 1000);
-      this.lastElapsed = frame.elapsedMs;
       if (!this.ctx || !this.size) return;
       if (this.motion.matches && !force && previous.status === frame.status && previous.phase === frame.phase) return;
-      if (dt > .3 || dt < 0) { this.seedParticles(); dt = 0; }
+      const elapsed = Number.isFinite(frame.elapsedMs) ? frame.elapsedMs : 0;
+      const previousElapsed = this.lastElapsed;
+      // The core remains smoothly animated on every RAF. Limit the expensive
+      // particle canvas redraws to ~30 fps to avoid overloading the compositor.
+      if (!force && !this.motion.matches && frame.status === 'running' && previous.status === frame.status &&
+          elapsed >= previousElapsed && elapsed - previousElapsed < 32) return;
+      this.lastElapsed = elapsed;
+      // A suspended tab or slow frame must never reseed all particles: that
+      // causes a visible flash when the frame loop catches up.
+      let dt = Math.max(0, Math.min(.05, (elapsed - previousElapsed) / 1000));
       if (this.motion.matches || frame.status !== 'running') dt = 0;
       this.draw(dt);
     }
