@@ -15,7 +15,7 @@
       this.ctx = canvas.getContext('2d', { alpha: true });
       this.motion = matchMedia('(prefers-reduced-motion: reduce)');
       this.frame = { level: 0, phase: 'inhale', status: 'idle', elapsedMs: 0 };
-      this.particles = []; this.size = 0; this.lastElapsed = 0; this.maxCount = 6200;
+      this.particles = []; this.size = 0; this.lastElapsed = 0; this.maxCount = 3800;
       this.sprite = this.makeSprite();
       this.onMotion = () => this.setFrame(this.frame, true);
       this.motion.addEventListener('change', this.onMotion);
@@ -38,7 +38,9 @@
     resize() {
       const size = this.stage.getBoundingClientRect().width;
       if (!size) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // 1.5x is sufficient for the fine particles and avoids large transparent
+      // GPU surfaces overlapping the fixed toolbar and floating button.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       if (Math.abs(size - this.size) < .5 && dpr === this.dpr) return;
       this.size = size; this.dpr = dpr;
       this.canvas.width = Math.round(size * dpr); this.canvas.height = Math.round(size * dpr);
@@ -47,7 +49,7 @@
     }
     seedParticles() {
       const rand = randomGenerator(482193);
-      const count = Math.min(this.maxCount, this.size > 510 ? 6200 : this.size > 400 ? 4500 : 3700);
+      const count = Math.min(this.maxCount, this.size > 510 ? 3800 : this.size > 400 ? 3000 : 2400);
       const band = this.band;
       const streams = Array.from({length: 96}, (_, i) => ({
         angle: i / 96 * TAU + (rand() - .5) * .035,
@@ -76,7 +78,7 @@
       // The core remains smoothly animated on every RAF. Limit the expensive
       // particle canvas redraws to ~30 fps to avoid overloading the compositor.
       if (!force && !this.motion.matches && frame.status === 'running' && previous.status === frame.status &&
-          elapsed >= previousElapsed && elapsed - previousElapsed < 32) return;
+          elapsed >= previousElapsed && elapsed - previousElapsed < 40) return;
       this.lastElapsed = elapsed;
       // A suspended tab or slow frame must never reseed all particles: that
       // causes a visible flash when the frame loop catches up.

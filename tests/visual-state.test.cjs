@@ -50,11 +50,37 @@ test('delayed particle animation frames preserve the particle field and are fram
   renderer.setFrame(frame(100));
   renderer.setFrame(frame(116));
   assert.equal(drawn.length, 1, 'short intervals do not redraw the expensive canvas');
-  renderer.setFrame(frame(134));
+  renderer.setFrame(frame(142));
   assert.equal(drawn.length, 2);
   renderer.setFrame(frame(900));
   assert.equal(drawn.length, 3, 'delayed frames still draw without resetting particles');
   assert.equal(reseeds, 0);
   assert.ok(drawn.every(dt => dt >= 0 && dt <= .05), 'particle displacement remains bounded');
   renderer.destroy();
+});
+
+test('toolbar and floating link do not depend on live breathing-canvas backdrop sampling', () => {
+  const summary = css.match(/\\.ambience-menu>summary\\{([^}]*)\\}/);
+  const popup = css.match(/\\.ambience-popover\\{([^}]*)\\}/);
+  const link = css.match(/\\.studio-link\\s*\\{([^}]*)\\}/);
+  const header = css.match(/\\.header\\{([^}]*)\\}/);
+  const stage = css.match(/\\.stage\\s*\\{([^}]*)\\}/);
+  const canvas = css.match(/#corona\\s*\\{([^}]*)\\}/);
+  assert.ok(summary && popup && link && header && stage && canvas);
+  assert.doesNotMatch(summary[1], /backdrop-filter/, 'toolbar cannot sample the animated backdrop');
+  assert.doesNotMatch(popup[1], /backdrop-filter/, 'open menus must be stable during animation');
+  assert.match(summary[1], /background:rgba\\(10,27,31,\\.86\\)/);
+  assert.match(header[1], /isolation:isolate/);
+  assert.match(link[1], /transform: translate3d\\(0, 0, 0\\)/);
+  assert.match(link[1], /backface-visibility: hidden/);
+  assert.match(stage[1], /contain: layout paint/);
+  assert.match(canvas[1], /contain: paint/);
+  assert.match(canvas[1], /transform: translate3d\\(0, 0, 0\\)/);
+});
+
+test('breathing canvas caps GPU surface size and particle workload', () => {
+  const corona = fs.readFileSync(path.join(__dirname, '..', 'corona.js'), 'utf8');
+  assert.match(corona, /this\\.maxCount = 3800/);
+  assert.match(corona, /Math\\.min\\(window\\.devicePixelRatio \\|\\| 1, 1\\.5\\)/);
+  assert.match(corona, /elapsed - previousElapsed < 40/);
 });

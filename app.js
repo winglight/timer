@@ -284,7 +284,10 @@
     const opacity = frame.status === 'running' && !renderer.motion.matches
       ? smooth(Math.min(engine.cycleOffsetMs / fadeMs, (cycleMs - engine.cycleOffsetMs) / fadeMs, 1))
       : 1;
-    $('breathing-quote').style.opacity = String(opacity);
+    const quote = $('breathing-quote');
+    // Skip identical paint writes while a quote is fully visible or hidden.
+    const nextOpacity = String(Math.round(opacity * 1000) / 1000);
+    if (quote.style.opacity !== nextOpacity) quote.style.opacity = nextOpacity;
   }
   function render() {
     const frame = engine.snapshot();
