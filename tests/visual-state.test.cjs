@@ -6,6 +6,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const ambient = fs.readFileSync(path.join(__dirname, '..', 'ambient.js'), 'utf8');
 
 test('active and paused practices hide the complete calendar and use the available width', () => {
   assert.match(css, /body:is\(\[data-status="running"\], \[data-status="paused"\]\) \.calendar-card\s*\{\s*display:\s*none;/);
@@ -88,11 +90,12 @@ test('breathing canvas caps GPU surface size and particle workload', () => {
 });
 
 test('active breathing hides setup controls but keeps the remaining timer and reset action', () => {
-  assert.match(css, /body\\[data-status="running"\\] \\.header-actions > \\.ambience-menu/);
-  assert.match(css, /body\\[data-status="running"\\] #settings-open/);
-  assert.match(css, /body\\[data-status="running"\\] #language-toggle/);
-  assert.match(css, /body\\[data-status="running"\\] #rhythm-settings/);
-  assert.doesNotMatch(css.match(/body\\[data-status="running"\\][\\s\\S]*?\\{([^}]*)\\}/)?.[1] || '', /#remaining|#reset/);
+  const hideBlock = css.match(/body\\[data-status="running"\\] \\.header-actions > \\.header-divider,[\\s\\S]*?body\\[data-status="running"\\] #rhythm-settings\\s*\\{\\s*display:\\s*none !important;\\s*\\}/);
+  assert.ok(hideBlock, 'active-session setup-control rule exists');
+  for (const selector of ['.ambience-menu', '#language-toggle', '#settings-open', '#rhythm-settings']) {
+    assert.ok(hideBlock[0].includes(selector), selector + ' is hidden while running');
+  }
+  assert.doesNotMatch(hideBlock[0], /#remaining|#reset/, 'remaining timer and reset remain available');
 });
 
 test('scene picker exposes ten named scenes including the off option', () => {
