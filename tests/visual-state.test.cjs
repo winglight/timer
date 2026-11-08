@@ -86,3 +86,35 @@ test('breathing canvas caps GPU surface size and particle workload', () => {
   assert.match(corona, /Math\\.min\\(window\\.devicePixelRatio \\|\\| 1, 1\\.5\\)/);
   assert.match(corona, /elapsed - previousElapsed < 40/);
 });
+
+test('active breathing hides setup controls but keeps the remaining timer and reset action', () => {
+  assert.match(css, /body\\[data-status="running"\\] \\.header-actions > \\.ambience-menu/);
+  assert.match(css, /body\\[data-status="running"\\] #settings-open/);
+  assert.match(css, /body\\[data-status="running"\\] #language-toggle/);
+  assert.match(css, /body\\[data-status="running"\\] #rhythm-settings/);
+  assert.doesNotMatch(css.match(/body\\[data-status="running"\\][\\s\\S]*?\\{([^}]*)\\}/)?.[1] || '', /#remaining|#reset/);
+});
+
+test('scene picker exposes ten named scenes including the off option', () => {
+  const names = [...html.matchAll(/data-scene="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(new Set(names).size, 10);
+  for (const name of ['forest', 'waterfall', 'starlight', 'blossom', 'desert']) {
+    assert.ok(names.includes(name), name + ' scene is present');
+    assert.ok(ambient.includes(name+':['), name + ' has bilingual labels');
+  }
+});
+
+test('sound picker exposes four additional licensed field recordings', () => {
+  const names = [...html.matchAll(/data-sound="([^"]+)"/g)].map(match => match[1]);
+  for (const name of ['forest', 'brook', 'fire', 'breeze']) {
+    assert.ok(names.includes(name), name + ' sound is present');
+    assert.ok(ambient.includes(name+':{label:'), name + ' has an audio source');
+  }
+  for (const file of ['20090610_0_ambience.ogg','Forest_lawn_creek.ogg','Campfire_sound_ambience.ogg','Gentle_breeze_and_birds_singing.ogg']) {
+    assert.ok(html.includes(file), file + ' has an attribution link');
+  }
+});
+
+test('scene and sound pickers close when breathing starts', () => {
+  assert.match(ambient, /new MutationObserver\(\(\)=>\{[\s\S]*?document\.body\.dataset\.status==='running'/);
+});

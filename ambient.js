@@ -6,11 +6,15 @@
  const sceneMenu=$('scene-menu'),soundMenu=$('sound-menu');
  if(!world||!volume||!volumeValue)return;
  const KEY='breathing-ambience-v2',LEGACY_KEY='breathing-ambience-v1';
- const sceneLabels={none:['关闭','Off'],sunset:['日落湖畔','Sunset lake'],ocean:['海浪与晚霞','Ocean at dusk'],mountain:['云海山顶','Sea of clouds'],cabin:['雨夜林中小屋','Forest cabin']};
+ const sceneLabels={none:['关闭','Off'],sunset:['日落湖畔','Sunset lake'],ocean:['海浪与晚霞','Ocean at dusk'],mountain:['云海山顶','Sea of clouds'],cabin:['雨夜林中小屋','Forest cabin'],forest:['森林晨雾','Misty forest'],waterfall:['静谧溪谷','Quiet waterfall'],starlight:['星空夜色','Starry night'],blossom:['樱花微风','Cherry blossoms'],desert:['沙漠暮色','Desert dusk']};
  const tracks={
   ocean:{label:['海浪轻拍沙滩','Gentle ocean waves'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Oceanwavescrushing.ogg'},
   rain:{label:['轻柔雨声','Soft rainfall'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Sound_of_light_rainfall.ogg'},
-  birds:{label:['清晨林间鸟鸣','Morning forest birds'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Birdsong_morning_01.ogg'}
+  birds:{label:['清晨林间鸟鸣','Morning forest birds'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Birdsong_morning_01.ogg'},
+  forest:{label:['森林环境声','Forest ambience'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/20090610_0_ambience.ogg'},
+  brook:{label:['林间溪流','Forest brook'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Forest_lawn_creek.ogg'},
+  fire:{label:['篝火轻响','Soft campfire'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Campfire_sound_ambience.ogg'},
+  breeze:{label:['微风与鸟鸣','Gentle breeze & birds'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Gentle_breeze_and_birds_singing.ogg'}
  };
  const soundButtons=[...document.querySelectorAll('[data-sound]')],sceneButtons=[...document.querySelectorAll('[data-scene]')];
  const sceneCurrent=$('scene-current'),soundCurrent=$('sound-current');
@@ -82,6 +86,14 @@
   document.querySelectorAll('[data-zh][data-en]').forEach(el=>{el.textContent=en?el.dataset.en:el.dataset.zh;});
   volume.setAttribute('aria-label',en?'Ambient volume':'环境音量');updateSceneUI();updateSoundUI();
  }
+ // Close open pickers as soon as a session starts, so hidden menus do not
+ // unexpectedly reappear in an expanded state when the user pauses.
+ new MutationObserver(()=>{
+  if(document.body.dataset.status==='running'){
+   if(sceneMenu)sceneMenu.open=false;
+   if(soundMenu)soundMenu.open=false;
+  }
+ }).observe(document.body,{attributes:true,attributeFilter:['data-status']});
  sceneButtons.forEach(button=>button.addEventListener('click',()=>{setScene(button.dataset.scene);if(sceneMenu)sceneMenu.open=false;}));
  soundButtons.forEach(button=>button.addEventListener('click',()=>chooseSound(button.dataset.sound)));
  volume.addEventListener('input',()=>setVolume(volume.value));

@@ -352,3 +352,19 @@ body:not([data-status="running"]) .scene-motion {
 body[data-status="running"] .scene-layer.active img {
   will-change: transform;
 }
+
+/* Hide setup controls during active breathing; keep the remaining-time display
+   and bring all controls back immediately when the session is paused. */
+body[data-status="running"] .header-actions > .header-divider,
+body[data-status="running"] .header-actions > .ambience-menu,
+body[data-status="running"] #language-toggle,
+body[data-status="running"] #settings-open,
+body[data-status="running"] #rhythm-settings {
+  display: none !important;
+}
+
+/* The expanded scene library remains scrollable on shorter screens. */
+.scene-popover {
+  max-height: min(70svh, 540px);
+  overflow-y: auto;
+}
