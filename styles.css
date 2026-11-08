@@ -48,8 +48,8 @@ h1 { margin: 0; font-size: 28px; font-weight: 500; letter-spacing: .15em; line-h
 .breathing-area { display: flex; flex-direction: column; align-items: center; }
 .breathing-quote { width: min(440px, 100%); min-height: 3.6em; margin: 22px 0 0; padding: 0 18px; display: flex; align-items: center; justify-content: center; text-align: center; color: #57938e; font-size: 14px; font-weight: 400; line-height: 1.8; letter-spacing: .1em; text-wrap: balance; }
 html[lang="en"] .breathing-quote { letter-spacing: .025em; }
-.stage { width: min(650px, 100%, calc(100svh - 334px)); min-width: 0; aspect-ratio: 1; position: relative; margin: 0 auto; isolation: isolate; contain: layout paint; }
-#corona { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; contain: paint; transform: translate3d(0, 0, 0); backface-visibility: hidden; }
+.stage { width: min(650px, 100%, calc(100svh - 334px)); min-width: 0; aspect-ratio: 1; position: relative; margin: 0 auto; isolation: isolate; }
+#corona { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .orb-core { width: 50%; aspect-ratio: 1; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(.80); will-change: transform; z-index: 1;
   background: radial-gradient(circle at 27% 23%, #e5f3e2 0, #c8e9dd 30%, #a8dad6 60%, #8bcbd0 100%);
   border: 1px solid rgba(244, 255, 249, .92); box-shadow: inset 0 0 0 1px rgba(238, 255, 252, .12); }
@@ -147,8 +147,8 @@ body.modal-open { overflow: hidden; }
 .cloud-fields[hidden] { display: none; }
 .cloud-fields label { display: grid; grid-template-columns: 82px minmax(0,1fr); align-items: center; gap: 10px; color: #6f8c80; font-size: 12px; }
 .cloud-fields input { min-width: 0; width: 100%; padding: 10px 12px; border: 1px solid #dbe9e1; border-radius: 10px; background: #f5faf7; color: var(--ink); }
-.studio-link { position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 8; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #2f665b; color: #fff; box-shadow: 0 8px 26px #244e3738; transform: translate3d(0, 0, 0); backface-visibility: hidden; contain: paint; will-change: transform; transition: transform .2s, box-shadow .2s; }
-.studio-link:hover { transform: translate3d(0, -2px, 0); box-shadow: 0 11px 30px #244e3748; }
+.studio-link { position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 8; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #2f665b; color: #fff; box-shadow: 0 8px 26px #244e3738; transition: transform .2s, box-shadow .2s; }
+.studio-link:hover { transform: translateY(-2px); box-shadow: 0 11px 30px #244e3748; }
 .studio-link svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .switch { width: 40px; height: 24px; position: relative; display: inline-block; }
 .switch input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
@@ -239,7 +239,7 @@ body.modal-open { overflow: hidden; }
 .scene-layer{position:absolute;inset:-2.5%;opacity:0;transition:opacity 1.2s ease;overflow:hidden}
 .scene-layer.active{opacity:1}
 .scene-layer img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.035);filter:saturate(.92) contrast(1.02)}
-.scene-layer.active img{animation:scene-camera-drift 70s ease-in-out infinite alternate;will-change:transform}
+.scene-layer.active img{animation:scene-camera-drift 70s ease-in-out infinite alternate}
 .scene-layer[data-scene-layer="sunset"]{background:linear-gradient(135deg,#364657,#e5a27f 55%,#384c50)}
 .scene-layer[data-scene-layer="ocean"]{background:linear-gradient(180deg,#9abac3,#d7a58a 55%,#245767)}
 .scene-layer[data-scene-layer="mountain"]{background:linear-gradient(180deg,#9eb9ca,#d9e4e0 48%,#536b6c)}
@@ -260,7 +260,7 @@ body.modal-open { overflow: hidden; }
 
 /* Top-bar pickers. Each click selects or plays directly; no nested select controls. */
 .app{position:relative;z-index:2}
-.header{position:relative;z-index:5;isolation:isolate}
+.header{position:relative;z-index:5}
 .header-actions{gap:9px}
 .ambience-menu{position:relative;flex:0 0 auto}
 /* Fixed-opacity glass avoids live backdrop sampling of the breathing canvas,
@@ -305,7 +305,7 @@ body.modal-open { overflow: hidden; }
 }
 
 /* Translucent calendar glass keeps the landscape visible behind the existing data. */
-.calendar-card{color:#f1f7f2;background:rgba(10,26,30,.48);border:1px solid rgba(255,255,255,.22);box-shadow:0 16px 56px rgba(0,0,0,.17);backdrop-filter:blur(13px) saturate(118%)}
+.calendar-card{color:#f1f7f2;background:rgba(10,26,30,.84);border:1px solid rgba(255,255,255,.22);box-shadow:0 16px 56px rgba(0,0,0,.17)}
 .calendar-card h2,.calendar-card h3,.calendar-card .month-label,.calendar-card .stat-value{color:#f3f8f4}
 .calendar-card .text-button,.calendar-card .calendar-foot,.calendar-card .calendar-legend,.calendar-card #today-button{color:#c3ddd1}
 .calendar-card .text-button:hover,.calendar-card #today-button:hover{color:#fff}
@@ -340,4 +340,15 @@ body:not([data-scene="none"]) .orb-core {
 body:is([data-status="running"], [data-status="paused"]) .calendar-card { display: none; }
 @media (min-width: 1100px) {
   body:is([data-status="running"], [data-status="paused"]) .app { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Freeze full-screen scene motion outside an active breathing session.
+   This avoids continuous compositor invalidation beneath static UI panels. */
+body:not([data-status="running"]) .scene-layer.active img,
+body:not([data-status="running"]) .scene-motion {
+  animation: none !important;
+  will-change: auto;
+}
+body[data-status="running"] .scene-layer.active img {
+  will-change: transform;
 }

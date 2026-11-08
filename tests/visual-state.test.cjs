@@ -59,23 +59,25 @@ test('delayed particle animation frames preserve the particle field and are fram
   renderer.destroy();
 });
 
-test('toolbar and floating link do not depend on live breathing-canvas backdrop sampling', () => {
-  const summary = css.match(/\\.ambience-menu>summary\\{([^}]*)\\}/);
-  const popup = css.match(/\\.ambience-popover\\{([^}]*)\\}/);
-  const link = css.match(/\\.studio-link\\s*\\{([^}]*)\\}/);
-  const header = css.match(/\\.header\\{([^}]*)\\}/);
-  const stage = css.match(/\\.stage\\s*\\{([^}]*)\\}/);
-  const canvas = css.match(/#corona\\s*\\{([^}]*)\\}/);
-  assert.ok(summary && popup && link && header && stage && canvas);
-  assert.doesNotMatch(summary[1], /backdrop-filter/, 'toolbar cannot sample the animated backdrop');
-  assert.doesNotMatch(popup[1], /backdrop-filter/, 'open menus must be stable during animation');
-  assert.match(summary[1], /background:rgba\\(10,27,31,\\.86\\)/);
-  assert.match(header[1], /isolation:isolate/);
-  assert.match(link[1], /transform: translate3d\\(0, 0, 0\\)/);
-  assert.match(link[1], /backface-visibility: hidden/);
-  assert.match(stage[1], /contain: layout paint/);
-  assert.match(canvas[1], /contain: paint/);
-  assert.match(canvas[1], /transform: translate3d\\(0, 0, 0\\)/);
+test('idle scene animations are frozen and unnecessary forced compositor layers are absent', () => {
+  assert.match(css, /body:not\(\[data-status="running"\]\) \.scene-layer\.active img,[\s\S]*?body:not\(\[data-status="running"\]\) \.scene-motion\s*\{\s*animation:\s*none !important;/);
+  assert.match(css, /body\[data-status="running"\] \.scene-layer\.active img\s*\{\s*will-change:\s*transform;/);
+  const link = css.match(/\.studio-link\s*\{([^}]*)\}/);
+  const header = css.match(/\.header\{([^}]*)\}/);
+  const stage = css.match(/\.stage\s*\{([^}]*)\}/);
+  const canvas = css.match(/#corona\s*\{([^}]*)\}/);
+  assert.ok(link && header && stage && canvas);
+  assert.doesNotMatch(link[1], /will-change|backface-visibility|contain:\s*paint|translate3d/);
+  assert.doesNotMatch(header[1], /isolation/);
+  assert.doesNotMatch(stage[1], /contain:\s*layout paint/);
+  assert.doesNotMatch(canvas[1], /contain:\s*paint|translate3d|backface-visibility/);
+});
+
+test('calendar glass does not continuously sample the scene behind it', () => {
+  const card = css.match(/\.calendar-card\{([^}]*)\}/);
+  assert.ok(card);
+  assert.doesNotMatch(card[1], /backdrop-filter/);
+  assert.match(card[1], /background:rgba\(10,26,30,\.84\)/);
 });
 
 test('breathing canvas caps GPU surface size and particle workload', () => {
