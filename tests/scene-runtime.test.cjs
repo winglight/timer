@@ -122,7 +122,7 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
   assert.equal(h.frames.size, 1);
   h.frame(0); h.frame(40);
   assert.ok(h.renderer.renders.length > 0);
-  for (const id of ['cabin', 'mountain', 'ocean']) {
+  for (const id of ['cabin', 'mountain', 'sunset', 'forest', 'blossom', 'ocean']) {
     h.scene(id); await h.ready(); h.runtime.syncPlayback(); h.runtime.syncPlayback();
     assert.equal(h.frames.size, 1, id + ' must have one frame owner');
   }
@@ -135,7 +135,7 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
 });
 
 test('off, legacy, hidden and reduced-motion starts do not allocate a GPU renderer', async () => {
-  for (const options of [{ scene: 'none' }, { scene: 'forest' }, { hidden: true }, { reduced: true }]) {
+  for (const options of [{ scene: 'none' }, { scene: 'waterfall' }, { hidden: true }, { reduced: true }]) {
     const h = await harness(options); await h.ready();
     assert.equal(h.rendererCreates, 0, JSON.stringify(options));
     assert.equal(h.frames.size, 0);
@@ -217,8 +217,8 @@ test('rendering is capped, delayed frames are clamped and a large viewport remai
   h.frame(80000);
   assert.ok(h.runtime.elapsed - elapsed <= .100001, 'a delayed frame cannot launch rain across the scene');
   const size = h.renderer.sizes.at(-1);
-  assert.ok(size.pixelRatio <= 1.25);
-  assert.ok(size.width * size.height * size.pixelRatio ** 2 <= 1800001, 'GPU drawing surface must be bounded');
+  assert.ok(size.pixelRatio <= 2);
+  assert.ok(size.width * size.height * size.pixelRatio ** 2 <= 8000001, 'GPU drawing surface must be bounded');
   h.resize(844, 390);
   assert.deepEqual(h.handles.at(-1).sizes.at(-1), { width: 844, height: 390 });
   h.runtime.destroy();
@@ -336,5 +336,26 @@ test('an obsolete scene load failure cannot disable a newer successful scene', a
   assert.equal(h.renderer.renders.at(-1).scene.id, 'mountain');
   assert.equal(h.frames.size, 1);
   assert.equal(h.canvas.classList.contains('is-ready'), true);
+  h.runtime.destroy();
+});
+
+
+test('water renders at high density while scene switches restore each effect budget', async () => {
+  const { scenePixelRatio } = await import(runtimeURL);
+  const h = await harness({ width: 390, height: 844, dpr: 3 }); await h.ready();
+  assert.equal(h.renderer.sizes.at(-1).pixelRatio, 2, 'fine ocean reflections resolve at 2x CSS density');
+  for (const [id, density] of [['cabin', 1.25], ['mountain', 1.5], ['sunset', 2], ['forest', 1.5], ['blossom', 2]]) {
+    h.scene(id); await h.ready();
+    assert.equal(h.renderer.sizes.at(-1).pixelRatio, density, id);
+    assert.equal(h.frames.size, 1);
+  }
+  assert.equal(h.rendererCreates, 1, 'quality switches reuse the same context');
+  for (const [id, budget] of [['ocean', 8000000], ['sunset', 8000000], ['cabin', 1200000], ['mountain', 1600000], ['forest', 2000000], ['blossom', 4000000]]) {
+    for (const [width, height] of [[390, 844], [1920, 1080], [3840, 2160]]) {
+      const ratio = scenePixelRatio(id, width, height, 3);
+      assert.ok(width * height * ratio ** 2 <= budget + 1, id + ' stays within its surface budget');
+      assert.ok(scenePixelRatio(id, width, height, 1) <= 1, 'ordinary-density displays are not upscaled');
+    }
+  }
   h.runtime.destroy();
 });

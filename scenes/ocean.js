@@ -131,8 +131,13 @@ export const OCEAN_FRAGMENT_SHADER = /* glsl */ `
     float footprint = max(length(dFdx(point)), length(dFdy(point)));
     vec2 ripples = smallWave(point, vec2(0.42, 1.0), 1.75, 0.048, 0.4, 1.00, footprint);
     ripples += smallWave(point, vec2(-0.65, 0.86), 0.93, 0.037, 1.6, 1.43, footprint);
-    ripples += smallWave(point, vec2(0.91, 0.42), 0.51, 0.024, 3.1, 1.74, footprint);
-    ripples += smallWave(point, vec2(-0.13, 1.0), 0.28, 0.012, 4.7, 2.04, footprint);
+    ripples += smallWave(point, vec2(0.91, 0.42), 0.51, 0.032, 3.1, 1.74, footprint);
+    ripples += smallWave(point, vec2(-0.13, 1.0), 0.28, 0.019, 4.7, 2.04, footprint);
+    // The higher-resolution drawing buffer can now resolve these foreground
+    // capillary ripples. Derivative filtering removes them before they become
+    // sub-pixel noise in the distance or on a lower-density display.
+    ripples += smallWave(point, vec2(0.72, 0.69), 0.155, 0.010, 2.3, 2.37, footprint);
+    ripples += smallWave(point, vec2(-0.51, 0.86), 0.089, 0.006, 0.8, 2.79, footprint);
     vec3 normal = normalize(vSurfaceNormal + vec3(-ripples.x, 0.0, -ripples.y));
     vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
     float facing = max(dot(normal, viewDirection), 0.001);
@@ -150,7 +155,7 @@ export const OCEAN_FRAGMENT_SHADER = /* glsl */ `
     float nh = max(dot(normal, halfDirection), 0.0);
     float nl = max(dot(normal, SUN_DIRECTION), 0.0);
     float vh = max(dot(viewDirection, halfDirection), 0.0);
-    float roughness = 0.16;
+    float roughness = 0.115;
     float a2 = roughness * roughness;
     float denominator = nh * nh * (a2 - 1.0) + 1.0;
     float distribution = a2 / (3.14159265 * denominator * denominator);
@@ -169,7 +174,10 @@ export const OCEAN_FRAGMENT_SHADER = /* glsl */ `
 `;
 
 function createWaterGeometry() {
-  const columns = 128, rows = 160;
+  // Keep the grid below 65,536 vertices while resolving the near-water shape
+  // at a 2x drawing-buffer scale. Longitudinal subdivision matters most at the
+  // grazing angles that otherwise reveal broad interpolated bands.
+  const columns = 224, rows = 256;
   const positions = new Float32Array((columns + 1) * (rows + 1) * 3);
   const indices = new Uint16Array(columns * rows * 6);
   let cursor = 0;

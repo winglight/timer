@@ -1,5 +1,23 @@
-/* The three pilot scenes share one lazy WebGL renderer. UI and audio stay in DOM. */
-export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain']);
+/* Environmental scenes share one lazy WebGL renderer. UI and audio stay in DOM. */
+export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain', 'sunset', 'forest', 'blossom']);
+
+// Water needs enough physical pixels to resolve fine normals and reflections.
+// Soft volumetric effects have separate budgets; the accepted cabin stays at
+// its original quality. These limits describe allocation, not measured fps.
+const SCENE_QUALITY = {
+  ocean: { density: 2, pixels: 8000000 },
+  sunset: { density: 2, pixels: 8000000 },
+  mountain: { density: 1.5, pixels: 1600000 },
+  forest: { density: 1.5, pixels: 2000000 },
+  blossom: { density: 2, pixels: 4000000 },
+  cabin: { density: 1.25, pixels: 1200000 }
+};
+
+export function scenePixelRatio(id, width, height, devicePixelRatio = 1) {
+  const quality = SCENE_QUALITY[id] || SCENE_QUALITY.cabin;
+  return Math.min(devicePixelRatio || 1, quality.density,
+    Math.sqrt(quality.pixels / (Math.max(1, width) * Math.max(1, height))));
+}
 
 async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
   const THREE = await import('./vendor/three.module.js');
@@ -25,8 +43,20 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
 
 async function createScene(options) {
   if (options.id === 'ocean') {
-    const { createOceanScene } = await import('./scenes/ocean.js?v=20261114-3');
+    const { createOceanScene } = await import('./scenes/ocean.js?v=20261115-1');
     return createOceanScene(options);
+  }
+  if (options.id === 'sunset') {
+    const { createLakeScene } = await import('./scenes/lake.js?v=20261115-1');
+    return createLakeScene(options);
+  }
+  if (options.id === 'mountain') {
+    const { createCloudScene } = await import('./scenes/clouds.js?v=20261115-1');
+    return createCloudScene(options);
+  }
+  if (options.id === 'forest' || options.id === 'blossom') {
+    const { createWoodlandScene } = await import('./scenes/woodland.js?v=20261115-1');
+    return createWoodlandScene(options);
   }
   const { createWeatherScene } = await import('./scenes/weather.js?v=20261114-3');
   return createWeatherScene(options);
@@ -104,8 +134,7 @@ export class SceneRuntime {
     const bounds = this.world.getBoundingClientRect();
     this.width = Math.max(1, Math.round(bounds.width));
     this.height = Math.max(1, Math.round(bounds.height));
-    this.pixelRatio = Math.min(this.window.devicePixelRatio || 1, 1.25,
-      Math.sqrt(1200000 / (this.width * this.height)));
+    this.pixelRatio = scenePixelRatio(this.scene, this.width, this.height, this.window.devicePixelRatio);
     if (this.renderer && !this.contextLost) this.renderer.setSize(this.width, this.height, this.pixelRatio);
     if (this.active) this.active.resize(this.width, this.height);
     if (this.shouldAnimate()) this.render(0);
@@ -135,6 +164,7 @@ export class SceneRuntime {
     this.disposeScene();
     if (this.renderer && !this.contextLost) this.renderer.clear();
     this.scene = next;
+    this.resize();
     this.failedScene = null;
     this.ready = Promise.resolve();
     this.elapsed = this.renderedElapsed = 0;
