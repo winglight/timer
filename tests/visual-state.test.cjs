@@ -28,6 +28,10 @@ test('photographs remain stationary and the environmental canvas cannot intercep
   assert.match(css, /\.scene-motion,\.scene-shade\s*\{[^}]*pointer-events:\s*none/);
   assert.match(html, /<canvas\s+[^>]*id="scene-motion"/);
   assert.match(html, /<script\s+src="scene-motion\.js(?:\?[^\"]+)?"/);
+  assert.match(html, /<canvas\s+[^>]*id="scene-webgl"/);
+  assert.match(html, /<script\s+type="module"\s+src="scene-runtime\.js(?:\?[^\"]+)?"/);
+  assert.match(css, /\.scene-webgl\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(css, /prefers-reduced-motion:reduce\)[^\n]*\.scene-motion,\.scene-webgl\{display:none\}/);
 });
 
 test('delayed particle animation frames preserve the particle field and are frame-limited', () => {

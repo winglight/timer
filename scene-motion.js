@@ -1,8 +1,9 @@
-/* Calm, local environmental motion. Photographs and the page UI stay still. */
+/* Legacy local motion for the six scenes outside the three.js pilot. */
 (() => {
   'use strict';
 
-  const SCENES = new Set(['sunset', 'ocean', 'mountain', 'cabin', 'forest', 'waterfall', 'starlight', 'blossom', 'desert']);
+  // Pilot scenes belong exclusively to scene-runtime.js, including fallback.
+  const SCENES = new Set(['sunset', 'forest', 'waterfall', 'starlight', 'blossom', 'desert']);
   const TAU = Math.PI * 2;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -103,7 +104,7 @@
       if (this.photo) this.photo.addEventListener('load', this.onPhotoLoad);
       this.preparePhoto();
       // Seed once per scene; frames reuse these values instead of changing DOM.
-      const count = next === 'cabin' ? 208 : next === 'waterfall' ? 96 : next === 'starlight' ? 64 : next === 'blossom' ? 36 : next === 'desert' ? 64 : 28;
+      const count = next === 'waterfall' ? 96 : next === 'starlight' ? 64 : next === 'blossom' ? 36 : next === 'desert' ? 64 : 28;
       this.particles = Array.from({ length: count }, (_, index) => ({
         x: Math.random(), y: Math.random(), depth: .3 + Math.random() * .7,
         phase: Math.random() * TAU, speed: .65 + Math.random() * .7, index
@@ -122,10 +123,10 @@
       const scale = Math.max(this.width / image.naturalWidth, this.height / image.naturalHeight);
       const width = image.naturalWidth * scale, height = image.naturalHeight * scale;
       this.photoBounds = { x: (this.width - width) / 2, y: (this.height - height) / 2, width, height };
-      if (!['ocean', 'sunset', 'mountain'].includes(this.scene)) return;
+      if (this.scene !== 'sunset') return;
       // Stronger local flow samples an overscanned texture, rather than moving
       // a viewport-sized rectangle and exposing gaps along its edges.
-      const pad = this.texturePad = this.scene === 'mountain' ? 112 : 40;
+      const pad = this.texturePad = 40;
       const tw = this.width + pad * 2, th = this.height + pad * 2;
       const ratio = this.textureRatio = Math.min(this.pixelRatio, Math.sqrt(1800000 / (tw * th)));
       const texture = document.createElement('canvas');
@@ -151,26 +152,6 @@
         ctx.translate(0, edge === 'top' ? pad * 2 : (pad + this.height) * 2);
         ctx.scale(1, -1);
         ctx.drawImage(texture, 0, y * ratio, tw * ratio, pad * ratio, 0, y, tw, pad);
-        ctx.restore();
-      }
-      if (this.scene === 'mountain') {
-        // The source contains a foreground ridge at the lower right. Its
-        // protection margin exceeds the maximum 84px cloud displacement.
-        const ridge = [[.84, .81], [.90, .775], [.95, .745], [1.04, .69], [1.04, 1.1], [.84, 1.1]];
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = '#000';
-        ctx.shadowColor = '#000';
-        ctx.shadowBlur = 34 * ratio;
-        ctx.beginPath();
-        ridge.forEach(([x, y], index) => {
-          const point = this.sourcePoint(x, y);
-          const px = pad + point.x + (x > 1 ? 104 : -104);
-          const py = pad + point.y - (index < 4 ? 32 : 0);
-          if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        });
-        ctx.closePath();
-        ctx.fill();
         ctx.restore();
       }
       this.photoTexture = texture;
@@ -217,9 +198,7 @@
       ctx.clearRect(0, 0, this.width, this.height);
       if (this.scene === 'none' || this.reducedMotion.matches || this.destroyed) return;
       ctx.save();
-      if (this.scene === 'ocean' || this.scene === 'sunset') this.drawWater();
-      else if (this.scene === 'mountain') { this.drawCloudSea(); this.drawMist(.66, .34); }
-      else if (this.scene === 'cabin') this.drawRain();
+      if (this.scene === 'sunset') this.drawWater();
       else if (this.scene === 'forest') this.drawMist(.58, .58);
       else if (this.scene === 'waterfall') this.drawWaterfall();
       else if (this.scene === 'starlight') this.drawStars();
@@ -230,8 +209,7 @@
 
     drawWater() {
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
-      const ocean = this.scene === 'ocean';
-      const horizon = clamp(this.sourcePoint(0, ocean ? .60 : .665).y, 0, h);
+      const horizon = clamp(this.sourcePoint(0, .665).y, 0, h);
       const depth = h - horizon;
       if (depth < 1) return;
       if (this.photoTexture) {
@@ -241,7 +219,7 @@
           const size = Math.min(strip + .6, h - y);
           const fraction = (y - horizon) / depth;
           const fade = Math.min(1, (y - horizon) / 32);
-          const amplitude = (ocean ? 26 : 11) * (.25 + fraction * .75) * fade;
+          const amplitude = 11 * (.25 + fraction * .75) * fade;
           const dx = amplitude * (.76 * Math.sin(t * .46 + fraction * TAU * 1.1) + .24 * Math.sin(t * .73 + fraction * TAU * 2));
           const dy = Math.sin(t * .5 + fraction * TAU * 1.5) * amplitude * .34;
           const sy = Math.max(horizon, y + dy);
@@ -253,15 +231,15 @@
       // spans avoid the full-width horizontal lines of a synthetic water grid.
       ctx.lineCap = 'round';
       for (let i = 0; i < 8; i++) {
-        const phase = (i / 8 + t * (ocean ? .018 : .010)) % 1;
+        const phase = (i / 8 + t * .010) % 1;
         const y = horizon + depth * phase * phase;
-        ctx.globalAlpha = Math.sin(phase * Math.PI) * (ocean ? .24 : .18);
-        ctx.lineWidth = (ocean ? 1.2 : .9) + phase * (ocean ? 2.6 : 1.5);
+        ctx.globalAlpha = Math.sin(phase * Math.PI) * .18;
+        ctx.lineWidth = .9 + phase * 1.5;
         for (let part = 0; part < 3; part++) {
           const span = w * (.12 + phase * .10) * (1 + Math.sin(i * 1.7 + part) * .22);
-          const left = ((w * (i * .173 + part * .39) + t * (ocean ? 3 : 1.5)) % (w + span * 2)) - span;
+          const left = ((w * (i * .173 + part * .39) + t * 1.5) % (w + span * 2)) - span;
           const glow = ctx.createLinearGradient(left, 0, left + span, 0);
-          const color = ocean ? '227,239,240' : '255,224,172';
+          const color = '255,224,172';
           glow.addColorStop(0, 'rgba(' + color + ',0)');
           glow.addColorStop(.28, 'rgba(' + color + ',.8)');
           glow.addColorStop(.6, 'rgba(' + color + ',1)');
@@ -278,22 +256,6 @@
       }
     }
 
-    drawCloudSea() {
-      if (!this.photoTexture) return;
-      const ctx = this.ctx, h = this.height, w = this.width, ratio = this.textureRatio, pad = this.texturePad;
-      const top = clamp(this.sourcePoint(0, .60).y, 0, h);
-      const strip = Math.max(3, (h - top) / 110);
-      for (let y = top; y < h; y += strip) {
-        const size = Math.min(strip + .6, h - y);
-        const fraction = (y - top) / Math.max(1, h - top);
-        const fade = Math.min(1, (y - top) / 52);
-        ctx.globalAlpha = fade * Math.min(1, this.elapsed / 1.2);
-        const dx = Math.sin(this.elapsed * .14) * (38 + fraction * 46) * fade;
-        const dy = Math.sin(this.elapsed * .19 + fraction * 2) * fraction * 5;
-        ctx.drawImage(this.photoTexture, (pad + dx) * ratio, (pad + y + dy) * ratio, w * ratio, size * ratio, 0, y, w, size);
-      }
-    }
-
     drawMist(level, opacity, sprite = this.mistSprite) {
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
       for (let i = 0; i < 6; i++) {
@@ -305,25 +267,6 @@
         ctx.globalAlpha = opacity * (i % 2 ? .78 : 1);
         ctx.drawImage(sprite, x, y - h * .14, span, h * .28);
       }
-    }
-
-    drawRain() {
-      const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
-      ctx.lineCap = 'round';
-      for (const drop of this.particles) {
-        const speed = 115 + drop.depth * 115;
-        const y = ((drop.y * (h + 90) + t * speed) % (h + 90)) - 45;
-        const x = (drop.x * (w + 100) + t * 14 * drop.depth) % (w + 100) - 50;
-        const length = 19 + drop.depth * 25;
-        ctx.globalAlpha = .24 + drop.depth * .28;
-        ctx.strokeStyle = '#e4f0f3';
-        ctx.lineWidth = .8 + drop.depth * .85;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + length * .12, y + length);
-        ctx.stroke();
-      }
-      this.drawMist(.72, .17);
     }
 
     drawWaterfall() {

@@ -245,6 +245,8 @@ body.modal-open { overflow: hidden; }
 .scene-layer[data-scene-layer="cabin"]{background:linear-gradient(180deg,#718b8b,#526b5b 55%,#172f2b)}
 .scene-motion,.scene-shade{position:absolute;inset:0;pointer-events:none}
 .scene-motion{display:block;width:100%;height:100%;z-index:1;contain:strict;isolation:isolate}
+.scene-webgl{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:1;pointer-events:none;contain:strict;isolation:isolate;opacity:0;transition:opacity .6s ease}
+.scene-webgl.is-ready{opacity:1}
 .scene-shade{z-index:2;background:linear-gradient(90deg,rgba(6,19,23,.38),rgba(6,19,23,.10) 52%,rgba(6,19,23,.32)),linear-gradient(180deg,rgba(6,19,23,.27),transparent 25%,transparent 73%,rgba(6,19,23,.28))}
 /* Only the bounded canvas changes during environmental motion. Keeping the
    full-size photo stationary avoids re-compositing the toolbar and calendar. */
@@ -317,7 +319,7 @@ body.modal-open { overflow: hidden; }
 .breathing-quote{color:#f0f7f2;text-shadow:0 2px 16px rgba(0,0,0,.32)}
 .practice-footer{color:rgba(235,246,239,.76)}.practice-footer:before{background:rgba(215,240,225,.55)}
 .tagline{color:#d4e9df;text-shadow:0 2px 12px rgba(0,0,0,.25)}
-@media(prefers-reduced-motion:reduce){.scene-layer,.ambient-world{transition:none!important}.scene-motion{display:none}}
+@media(prefers-reduced-motion:reduce){.scene-layer,.ambient-world{transition:none!important}.scene-motion,.scene-webgl{display:none}}
 
 /* Keep the scenery visible through the orb only when a photo scene is selected.
    The phase label is in its own layer and therefore remains fully opaque. */

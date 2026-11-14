@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'scene-motion.js'), 'utf8');
-const sceneIds = ['sunset', 'ocean', 'mountain', 'cabin', 'forest', 'waterfall', 'starlight', 'blossom', 'desert'];
+const sceneIds = ['sunset', 'forest', 'waterfall', 'starlight', 'blossom', 'desert'];
 
 function eventTarget() {
   const events = new Map();
@@ -18,7 +18,7 @@ function eventTarget() {
   };
 }
 
-function sceneHarness({ scene = 'ocean', width = 1280, height = 800, dpr = 2, hidden = false, reduced = false } = {}) {
+function sceneHarness({ scene = 'sunset', width = 1280, height = 800, dpr = 2, hidden = false, reduced = false } = {}) {
   const commands = [];
   const makeContext = record => new Proxy({}, {
     get(target, name) {
@@ -88,7 +88,7 @@ test('a selected scene animates while the timer is idle and scene changes keep o
 });
 
 test('hidden pages and page-cache suspension stop motion and resume without a time jump', () => {
-  const h = sceneHarness({ scene: 'cabin' }); h.frame(0); h.frame(50);
+  const h = sceneHarness({ scene: 'forest' }); h.frame(0); h.frame(50);
   const elapsed = h.renderer.elapsed;
   h.visibility(true); assert.equal(h.frames.size, 0);
   h.frame(80000); assert.equal(h.renderer.elapsed, elapsed);
@@ -137,14 +137,14 @@ test('every scenery effect changes locally over time without moving the photogra
   h.renderer.destroy();
 });
 
-test('water and cloud photo effects respect source cropping in portrait and landscape viewports', () => {
+test('legacy lake photo effects respect source cropping in portrait and landscape viewports', () => {
   for (const [width, height] of [[1280, 800], [390, 844]]) {
-    const h = sceneHarness({ width, height, scene: 'ocean' });
+    const h = sceneHarness({ width, height, scene: 'sunset' });
     const bounds = h.renderer.photoBounds;
     assert.ok(bounds.width >= width && bounds.height >= height, 'cover keeps the photograph filling the viewport');
     const center = h.renderer.sourcePoint(.5, .5);
     assert.equal(center.x, width / 2); assert.equal(center.y, height / 2);
-    const horizon = Math.max(0, Math.min(height, h.renderer.sourcePoint(0, .60).y));
+    const horizon = Math.max(0, Math.min(height, h.renderer.sourcePoint(0, .665).y));
     h.commands.length = 0; h.renderer.draw();
     const photoStrips = h.commands.filter(command => command[0] === 'drawImage' && command.length === 10);
     assert.ok(photoStrips.length > 0);
@@ -174,9 +174,9 @@ function textureOffsets(commands) {
   }));
 }
 
-test('water and cloud textures move perceptibly over a short viewing interval on desktop and mobile', () => {
+test('legacy lake textures move perceptibly over a short viewing interval on desktop and mobile', () => {
   for (const [width, height] of [[1280, 800], [390, 844]]) {
-    for (const [scene, minimum, maximum] of [['ocean', 3, 50], ['sunset', 1.5, 35], ['mountain', 6, 65]]) {
+    for (const [scene, minimum, maximum] of [['sunset', 1.5, 35]]) {
       const h = sceneHarness({ scene, width, height });
       const first = textureOffsets(drawAt(h, 2));
       const second = textureOffsets(drawAt(h, 4.5));
@@ -190,30 +190,15 @@ test('water and cloud textures move perceptibly over a short viewing interval on
   }
 });
 
-function drawingStrokes(commands) {
-  let alpha = 1, width = 1, points = [];
-  const strokes = [];
-  for (const command of commands) {
-    if (command[0] === 'set' && command[1] === 'globalAlpha') alpha = command[2];
-    else if (command[0] === 'set' && command[1] === 'lineWidth') width = command[2];
-    else if (command[0] === 'beginPath') points = [];
-    else if (command[0] === 'moveTo' || command[0] === 'lineTo') points.push([command[1], command[2]]);
-    else if (command[0] === 'stroke') strokes.push({ alpha, width, points });
+test('three.js pilot scenes cannot start the legacy renderer or its fallback effects', () => {
+  const h = sceneHarness();
+  for (const scene of ['ocean', 'cabin', 'mountain']) {
+    h.scene(scene);
+    assert.equal(h.renderer.scene, 'none');
+    assert.equal(h.frames.size, 0);
+    assert.equal(h.commands.at(-1)[0], 'clearRect');
   }
-  return strokes;
-}
-
-test('rain reads as a visible rainfall field with enough contrast and coverage', () => {
-  for (const [width, height] of [[1280, 800], [390, 844]]) {
-    const h = sceneHarness({ scene: 'cabin', width, height });
-    const drops = drawingStrokes(drawAt(h, 2)).filter(stroke => stroke.points.length === 2 &&
-      stroke.points[0][0] >= 0 && stroke.points[0][0] <= width && stroke.points[0][1] >= 0 && stroke.points[0][1] <= height);
-    assert.ok(drops.length >= 90, `${width}px scene should show a rainfall field, not a handful of drops`);
-    assert.ok(quantile(drops.map(drop => drop.alpha), .5) >= .3, 'rain retains contrast beneath the scene shade');
-    assert.ok(quantile(drops.map(drop => drop.width), .5) >= 1, 'rain is not reduced to barely visible subpixel lines');
-    assert.ok(drops.some(drop => drop.points[0][0] < width / 3) && drops.some(drop => drop.points[0][0] > width * 2 / 3), 'rain covers both sides of the scene');
-    h.renderer.destroy();
-  }
+  h.renderer.destroy();
 });
 
 test('forest haze has visible contrast and traverses several mobile pixels in a few seconds', () => {
@@ -230,10 +215,10 @@ test('forest haze has visible contrast and traverses several mobile pixels in a 
 });
 
 test('destroy removes frame callbacks, observers and all lifecycle and photo listeners', () => {
-  const h = sceneHarness(); h.scene('mountain');
-  assert.equal(h.images.get('ocean').events.get('load')?.size, 0, 'switching scenes releases the previous image listener');
+  const h = sceneHarness(); h.scene('forest');
+  assert.equal(h.images.get('sunset').events.get('load')?.size, 0, 'switching scenes releases the previous image listener');
   h.renderer.destroy(); assert.equal(h.frames.size, 0); assert.ok(h.observers.every(observer => observer.disconnected));
-  assert.equal(h.images.get('mountain').events.get('load')?.size, 0);
+  assert.equal(h.images.get('forest').events.get('load')?.size, 0);
   for (const target of [h.window, h.document, h.reducedMotion]) {
     assert.ok([...target.events.values()].every(listeners => listeners.size === 0));
   }

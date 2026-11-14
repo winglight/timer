@@ -14,14 +14,15 @@
 <div class="ambient-world" id="ambient-world" data-scene="none" aria-hidden="true">
  <div class="scene-layer" data-scene-layer="sunset"><img src="https://images.unsplash.com/photo-1699145748716-6ae58de1400d?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="ocean"><img src="https://images.unsplash.com/photo-1620989205499-9f5efe55e5ad?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
- <div class="scene-layer" data-scene-layer="mountain"><img src="https://images.unsplash.com/photo-1772089003225-6eccf98ddbf9?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
- <div class="scene-layer" data-scene-layer="cabin"><img src="https://images.unsplash.com/photo-1772955543023-a6e99819e161?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="mountain"><img src="assets/scenes/mountain.jpg" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="cabin"><img src="assets/scenes/cabin.jpg" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="forest"><img src="https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="waterfall"><img src="https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="starlight"><img src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="blossom"><img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="desert"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <canvas class="scene-motion" id="scene-motion" aria-hidden="true"></canvas>
+ <canvas class="scene-webgl" id="scene-webgl" aria-hidden="true"></canvas>
  <div class="scene-shade"></div>
 </div>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -160,7 +161,8 @@
 <script src="engine.js"></script>
 <script src="corona.js"></script>
 <script src="ambient.js"></script>
-<script src="scene-motion.js?v=20261114-2"></script>
+<script src="scene-motion.js?v=20261114-3"></script>
+<script type="module" src="scene-runtime.js?v=20261114-3"></script>
 <script src="share.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
