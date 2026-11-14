@@ -118,7 +118,14 @@ function soundHarness(config = DEFAULTS, hidden = false) {
         exponentialRampToValueAtTime: (value, time) => envelopes.push(['exponential', value, time])
       } }; }
     } },
-    $: id => { if (!elements.has(id)) elements.set(id, { dataset: {}, setAttribute() {} }); return elements.get(id); },
+    $: id => {
+      if (!elements.has(id)) {
+        const attributes = new Map();
+        elements.set(id, { dataset: {}, getAttribute: name => attributes.get(name) ?? null,
+          setAttribute: (name, value) => attributes.set(name, String(value)) });
+      }
+      return elements.get(id);
+    },
     setText() {}, renderBreathingQuote() {}, phaseWord: phase => phase, tr: zh => zh, isZh: () => true,
     formatClock: () => '', smooth: t => t,
     localDateKey: () => '2026-10-04', lastDate: '2026-10-04',

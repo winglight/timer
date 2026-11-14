@@ -21,7 +21,7 @@
  <div class="scene-layer" data-scene-layer="starlight"><img src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="blossom"><img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="desert"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=2400&q=85" alt="" decoding="async" loading="lazy"></div>
- <div class="scene-motion scene-water"></div><div class="scene-motion scene-mist"></div><div class="scene-motion scene-warmth"></div>
+ <canvas class="scene-motion" id="scene-motion" aria-hidden="true"></canvas>
  <div class="scene-shade"></div>
 </div>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -70,7 +70,7 @@
        <button type="button" class="scene-choice" data-scene="sunset"><img class="scene-thumb" src="https://images.unsplash.com/photo-1699145748716-6ae58de1400d?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="日落湖畔" data-en="Sunset lake">日落湖畔</span></button>
        <button type="button" class="scene-choice" data-scene="ocean"><img class="scene-thumb" src="https://images.unsplash.com/photo-1620989205499-9f5efe55e5ad?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="海浪与晚霞" data-en="Ocean at dusk">海浪与晚霞</span></button>
        <button type="button" class="scene-choice" data-scene="mountain"><img class="scene-thumb" src="https://images.unsplash.com/photo-1772089003225-6eccf98ddbf9?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="云海山顶" data-en="Sea of clouds">云海山顶</span></button>
-       <button type="button" class="scene-choice" data-scene="cabin"><img class="scene-thumb" src="https://images.unsplash.com/photo-1772955543023-a6e99819e161?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="雨夜林中小屋" data-en="Forest cabin">雨夜林中小屋</span></button>
+       <button type="button" class="scene-choice" data-scene="cabin"><img class="scene-thumb" src="https://images.unsplash.com/photo-1772955543023-a6e99819e161?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="细雨林中小屋" data-en="Rainy forest cabin">细雨林中小屋</span></button>
        <button type="button" class="scene-choice" data-scene="forest"><img class="scene-thumb" src="https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="森林晨雾" data-en="Misty forest">森林晨雾</span></button>
        <button type="button" class="scene-choice" data-scene="waterfall"><img class="scene-thumb" src="https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="静谧溪谷" data-en="Quiet waterfall">静谧溪谷</span></button>
        <button type="button" class="scene-choice" data-scene="starlight"><img class="scene-thumb" src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="星空夜色" data-en="Starry night">星空夜色</span></button>
@@ -160,6 +160,7 @@
 <script src="engine.js"></script>
 <script src="corona.js"></script>
 <script src="ambient.js"></script>
+<script src="scene-motion.js"></script>
 <script src="share.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">

@@ -19,12 +19,15 @@ test('selected photographic scenes use a translucent orb without affecting the d
   assert.match(css, /\.orb-core\s*\{[^}]*background:\s*radial-gradient\(/);
 });
 
-test('background ambient animations do not pulse opacity or repaint background position', () => {
-  for (const name of ['scene-water-shimmer', 'scene-mist-drift', 'scene-warm-glow']) {
-    const match = css.match(new RegExp('@keyframes\\s+' + name + '\\s*\\{([^\\n]*)\\}'));
-    assert.ok(match, name + ' exists');
-    assert.doesNotMatch(match[1], /opacity|background-position/, name + ' should animate transform only');
-  }
+test('photographs remain stationary and the environmental canvas cannot intercept controls', () => {
+  const photo = css.match(/\.scene-layer img\s*\{([^}]*)\}/);
+  assert.ok(photo);
+  assert.doesNotMatch(photo[1], /animation|transform|filter/, 'the full-size photo does not continuously recomposite');
+  assert.doesNotMatch(css, /@keyframes\s+scene-camera-drift/);
+  assert.match(css, /\.ambient-world\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(css, /\.scene-motion,\.scene-shade\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(html, /<canvas\s+[^>]*id="scene-motion"/);
+  assert.match(html, /<script\s+src="scene-motion\.js"/);
 });
 
 test('delayed particle animation frames preserve the particle field and are frame-limited', () => {
@@ -61,9 +64,8 @@ test('delayed particle animation frames preserve the particle field and are fram
   renderer.destroy();
 });
 
-test('idle scene animations are frozen and unnecessary forced compositor layers are absent', () => {
-  assert.match(css, /body:not\(\[data-status="running"\]\) \.scene-layer\.active img,[\s\S]*?body:not\(\[data-status="running"\]\) \.scene-motion\s*\{\s*animation:\s*none !important;/);
-  assert.match(css, /body\[data-status="running"\] \.scene-layer\.active img\s*\{\s*will-change:\s*transform;/);
+test('environmental movement is independent of practice status and unnecessary forced UI layers are absent', () => {
+  assert.doesNotMatch(css, /body[^\n]*data-status[^\n]*\.(?:scene-layer|scene-motion)/);
   const link = css.match(/\.studio-link\s*\{([^}]*)\}/);
   const header = css.match(/\.header\{([^}]*)\}/);
   const stage = css.match(/\.stage\s*\{([^}]*)\}/);
@@ -84,13 +86,13 @@ test('calendar glass does not continuously sample the scene behind it', () => {
 
 test('breathing canvas caps GPU surface size and particle workload', () => {
   const corona = fs.readFileSync(path.join(__dirname, '..', 'corona.js'), 'utf8');
-  assert.match(corona, /this\\.maxCount = 3800/);
-  assert.match(corona, /Math\\.min\\(window\\.devicePixelRatio \\|\\| 1, 1\\.5\\)/);
+  assert.match(corona, /this\.maxCount = 3800/);
+  assert.match(corona, /Math\.min\(window\.devicePixelRatio \|\| 1, 1\.5\)/);
   assert.match(corona, /elapsed - previousElapsed < 40/);
 });
 
 test('active breathing hides setup controls but keeps the remaining timer and reset action', () => {
-  const hideBlock = css.match(/body\\[data-status="running"\\] \\.header-actions > \\.header-divider,[\\s\\S]*?body\\[data-status="running"\\] #rhythm-settings\\s*\\{\\s*display:\\s*none !important;\\s*\\}/);
+  const hideBlock = css.match(/body\[data-status="running"\] \.header-actions > \.header-divider,[\s\S]*?body\[data-status="running"\] #rhythm-settings\s*\{\s*display:\s*none !important;\s*\}/);
   assert.ok(hideBlock, 'active-session setup-control rule exists');
   for (const selector of ['.ambience-menu', '#language-toggle', '#settings-open', '#rhythm-settings']) {
     assert.ok(hideBlock[0].includes(selector), selector + ' is hidden while running');

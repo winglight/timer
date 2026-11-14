@@ -15,10 +15,10 @@ https://timer.broyustudio.com/
 - Share a high-resolution practice snapshot to X
 - Browser-local persistence with migration from legacy breath_settings and breath_history data
 - Optional Cloudflare R2 synchronization for settings and practice history
-- Four photographic ambience scenes: sunset lake, ocean at dusk, sea of clouds, and a forest cabin
-- Slow camera drift and subtle scene-specific motion, with a dedicated off state
-- Real field recordings for ocean waves, soft rainfall, and morning birdsong; no synthesized noise
-- Independent one-click scene and sound pickers, volume adjustment, and saved preferences (audio requires a user gesture after reload)
+- Nine photographic ambience scenes: sunset lake, ocean at dusk, sea of clouds, forest cabin, misty forest, waterfall, starry night, cherry blossoms, and desert dusk
+- Gentle water movement, falling rain, drifting clouds and mist, and other scene-specific motion, available before and during practice; backgrounds can be switched off independently
+- Seven real field recordings for waves, rain, birds, forest ambience, a brook, campfire, and breeze; no synthesized noise
+- Independent scene and sound pickers, volume adjustment, saved preferences, and automatic restoration of enabled audio with a first-interaction fallback when the browser blocks autoplay
 - English and Simplified Chinese UI; responsive desktop and mobile layouts
 
 ## Media credits
@@ -35,7 +35,8 @@ The app uses vanilla HTML, CSS, and JavaScript.
 - engine.js — deterministic breathing timer model
 - corona.js — particle corona renderer
 - app.js — UI interactions, session history, cues, calendar, and sync
-- ambient.js — ambience scene selection and Web Audio sound generation
+- ambient.js — scene preferences and recorded ambient audio playback/restoration
+- scene-motion.js — isolated, frame-limited environmental animation
 - share.js — practice snapshot generation and sharing
 - styles.css — visual design, ambience, and responsive layout
 
@@ -44,6 +45,12 @@ The app uses vanilla HTML, CSS, and JavaScript.
 Run the existing test suite with:
 
     node --test tests/*.test.cjs
+
+## Ambient playback and motion
+
+Choose an ambient sound once to save it with its volume. On the next visit, the app attempts to resume that recording automatically. If the browser requires user interaction, the sound picker shows a tap-to-play state; the next click, tap, or key press on the page retries playback. A blocked autoplay attempt is distinguished from a recording that failed to load. Explicitly pausing a recording or choosing Silence is also remembered.
+
+The photographic background stays fixed while a separate canvas animates local environmental details. Motion runs while the page is visible, including before a breathing session starts. Switching the background off, leaving the tab, or enabling the operating system's reduced-motion setting stops the animation loop. The renderer limits its frame rate and drawing resolution to keep the timer and controls responsive.
 
 ## Language
 
