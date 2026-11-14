@@ -23,6 +23,8 @@
       this.photo = null;
       this.photoTexture = null;
       this.photoBounds = null;
+      this.texturePad = 0;
+      this.textureRatio = 1;
       this.particles = [];
       this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
       this.onFrame = timestamp => this.tick(timestamp);
@@ -39,11 +41,13 @@
       document.addEventListener('visibilitychange', this.onVisibility);
       this.reducedMotion.addEventListener('change', this.onVisibility);
       this.mistSprite = this.makeMistSprite();
+      this.dustSprite = this.makeMistSprite('225,193,151');
+      this.starSprite = this.makeStarSprite();
       this.resize();
       this.setScene(world.dataset.scene);
     }
 
-    makeMistSprite() {
+    makeMistSprite(color = '228,238,238') {
       const sprite = document.createElement('canvas');
       sprite.width = 256;
       sprite.height = 96;
@@ -51,11 +55,26 @@
       if (!ctx) return sprite;
       ctx.scale(1, .375);
       const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      gradient.addColorStop(0, 'rgba(228,238,238,.55)');
-      gradient.addColorStop(.45, 'rgba(228,238,238,.20)');
-      gradient.addColorStop(1, 'rgba(228,238,238,0)');
+      gradient.addColorStop(0, 'rgba(' + color + ',.85)');
+      gradient.addColorStop(.42, 'rgba(' + color + ',.42)');
+      gradient.addColorStop(1, 'rgba(' + color + ',0)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 256, 256);
+      return sprite;
+    }
+
+    makeStarSprite() {
+      const sprite = document.createElement('canvas');
+      sprite.width = sprite.height = 40;
+      const ctx = sprite.getContext('2d');
+      if (!ctx) return sprite;
+      const glow = ctx.createRadialGradient(20, 20, 0, 20, 20, 20);
+      glow.addColorStop(0, 'rgba(238,245,255,.95)');
+      glow.addColorStop(.15, 'rgba(214,231,255,.65)');
+      glow.addColorStop(.5, 'rgba(187,214,255,.14)');
+      glow.addColorStop(1, 'rgba(187,214,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, 40, 40);
       return sprite;
     }
 
@@ -84,7 +103,7 @@
       if (this.photo) this.photo.addEventListener('load', this.onPhotoLoad);
       this.preparePhoto();
       // Seed once per scene; frames reuse these values instead of changing DOM.
-      const count = next === 'cabin' ? 72 : next === 'starlight' ? 42 : next === 'blossom' ? 14 : 28;
+      const count = next === 'cabin' ? 208 : next === 'waterfall' ? 96 : next === 'starlight' ? 64 : next === 'blossom' ? 36 : next === 'desert' ? 64 : 28;
       this.particles = Array.from({ length: count }, (_, index) => ({
         x: Math.random(), y: Math.random(), depth: .3 + Math.random() * .7,
         phase: Math.random() * TAU, speed: .65 + Math.random() * .7, index
@@ -104,27 +123,50 @@
       const width = image.naturalWidth * scale, height = image.naturalHeight * scale;
       this.photoBounds = { x: (this.width - width) / 2, y: (this.height - height) / 2, width, height };
       if (!['ocean', 'sunset', 'mountain'].includes(this.scene)) return;
+      // Stronger local flow samples an overscanned texture, rather than moving
+      // a viewport-sized rectangle and exposing gaps along its edges.
+      const pad = this.texturePad = this.scene === 'mountain' ? 112 : 40;
+      const tw = this.width + pad * 2, th = this.height + pad * 2;
+      const ratio = this.textureRatio = Math.min(this.pixelRatio, Math.sqrt(1800000 / (tw * th)));
       const texture = document.createElement('canvas');
-      texture.width = this.canvas.width;
-      texture.height = this.canvas.height;
+      texture.width = Math.ceil(tw * ratio);
+      texture.height = Math.ceil(th * ratio);
       const ctx = texture.getContext('2d');
       if (!ctx) return;
-      ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
-      ctx.drawImage(image, this.photoBounds.x, this.photoBounds.y, width, height);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.drawImage(image, this.photoBounds.x + pad, this.photoBounds.y + pad, width, height);
+      // Mirror the visible image edges into the padding. This is prepared once,
+      // has no seams at zero displacement, and needs no per-frame allocation.
+      for (const edge of ['left', 'right']) {
+        const x = edge === 'left' ? pad : this.width;
+        ctx.save();
+        ctx.translate(edge === 'left' ? pad * 2 : (pad + this.width) * 2, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(texture, x * ratio, pad * ratio, pad * ratio, this.height * ratio, x, pad, pad, this.height);
+        ctx.restore();
+      }
+      for (const edge of ['top', 'bottom']) {
+        const y = edge === 'top' ? pad : this.height;
+        ctx.save();
+        ctx.translate(0, edge === 'top' ? pad * 2 : (pad + this.height) * 2);
+        ctx.scale(1, -1);
+        ctx.drawImage(texture, 0, y * ratio, tw * ratio, pad * ratio, 0, y, tw, pad);
+        ctx.restore();
+      }
       if (this.scene === 'mountain') {
-        // A foreground ridge enters the photograph at the lower right. Remove
-        // it from the moving texture so the original mountain stays anchored.
-        // The buffer exceeds the 15px cloud drift; the feather hides its edge.
+        // The source contains a foreground ridge at the lower right. Its
+        // protection margin exceeds the maximum 84px cloud displacement.
         const ridge = [[.84, .81], [.90, .775], [.95, .745], [1.04, .69], [1.04, 1.1], [.84, 1.1]];
         ctx.save();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.fillStyle = '#000';
         ctx.shadowColor = '#000';
-        ctx.shadowBlur = 18 * this.pixelRatio;
+        ctx.shadowBlur = 34 * ratio;
         ctx.beginPath();
         ridge.forEach(([x, y], index) => {
           const point = this.sourcePoint(x, y);
-          const px = point.x + (x > 1 ? 24 : -24), py = point.y - (index < 4 ? 24 : 0);
+          const px = pad + point.x + (x > 1 ? 104 : -104);
+          const py = pad + point.y - (index < 4 ? 32 : 0);
           if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
         });
         ctx.closePath();
@@ -176,9 +218,9 @@
       if (this.scene === 'none' || this.reducedMotion.matches || this.destroyed) return;
       ctx.save();
       if (this.scene === 'ocean' || this.scene === 'sunset') this.drawWater();
-      else if (this.scene === 'mountain') { this.drawCloudSea(); this.drawMist(.63, .11); }
+      else if (this.scene === 'mountain') { this.drawCloudSea(); this.drawMist(.66, .34); }
       else if (this.scene === 'cabin') this.drawRain();
-      else if (this.scene === 'forest') this.drawMist(.58, .14);
+      else if (this.scene === 'forest') this.drawMist(.58, .58);
       else if (this.scene === 'waterfall') this.drawWaterfall();
       else if (this.scene === 'starlight') this.drawStars();
       else if (this.scene === 'blossom') this.drawPetals();
@@ -193,59 +235,75 @@
       const depth = h - horizon;
       if (depth < 1) return;
       if (this.photoTexture) {
-        const ratio = this.pixelRatio;
-        const strip = Math.max(5, depth / 80);
+        const ratio = this.textureRatio, pad = this.texturePad;
+        const strip = Math.max(2, depth / 160);
         for (let y = horizon; y < h; y += strip) {
-          const size = Math.min(strip + .5, h - y);
+          const size = Math.min(strip + .6, h - y);
           const fraction = (y - horizon) / depth;
-          const fade = Math.min(1, (y - horizon) / 28);
-          const amplitude = (ocean ? 2.5 : 1.2) * fraction;
-          const dx = Math.sin(t * .40 + y * .024) * amplitude;
-          const dy = Math.sin(t * .32 + y * .016) * amplitude * .45;
-          const sy = clamp(y + dy, 0, h - size);
+          const fade = Math.min(1, (y - horizon) / 32);
+          const amplitude = (ocean ? 26 : 11) * (.25 + fraction * .75) * fade;
+          const dx = amplitude * (.76 * Math.sin(t * .46 + fraction * TAU * 1.1) + .24 * Math.sin(t * .73 + fraction * TAU * 2));
+          const dy = Math.sin(t * .5 + fraction * TAU * 1.5) * amplitude * .34;
+          const sy = Math.max(horizon, y + dy);
           ctx.globalAlpha = fade * Math.min(1, t / 1.2);
-          ctx.drawImage(this.photoTexture, 0, sy * ratio, w * ratio, size * ratio, dx, y, w, size);
+          ctx.drawImage(this.photoTexture, (pad + dx) * ratio, (pad + sy) * ratio, w * ratio, size * ratio, 0, y, w, size);
         }
       }
-      // Low-contrast reflections roll gently forward; no whole-image movement.
-      ctx.lineWidth = .7;
-      for (let i = 0; i < 9; i++) {
-        const phase = (i / 9 + t * (ocean ? .009 : .004)) % 1;
+      // Broken, softly tapered glints travel with the surface. Short irregular
+      // spans avoid the full-width horizontal lines of a synthetic water grid.
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const phase = (i / 8 + t * (ocean ? .018 : .010)) % 1;
         const y = horizon + depth * phase * phase;
-        const alpha = Math.sin(phase * Math.PI) * (ocean ? .105 : .07);
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = ocean ? '#d5e8e7' : '#f0d2a4';
-        ctx.beginPath();
-        for (let x = -10; x <= w + 10; x += 18) {
-          const wave = Math.sin(x / (90 + phase * 90) + t * .28 + i) * (1 + phase * 2);
-          if (x === -10) ctx.moveTo(x, y + wave); else ctx.lineTo(x, y + wave);
+        ctx.globalAlpha = Math.sin(phase * Math.PI) * (ocean ? .24 : .18);
+        ctx.lineWidth = (ocean ? 1.2 : .9) + phase * (ocean ? 2.6 : 1.5);
+        for (let part = 0; part < 3; part++) {
+          const span = w * (.12 + phase * .10) * (1 + Math.sin(i * 1.7 + part) * .22);
+          const left = ((w * (i * .173 + part * .39) + t * (ocean ? 3 : 1.5)) % (w + span * 2)) - span;
+          const glow = ctx.createLinearGradient(left, 0, left + span, 0);
+          const color = ocean ? '227,239,240' : '255,224,172';
+          glow.addColorStop(0, 'rgba(' + color + ',0)');
+          glow.addColorStop(.28, 'rgba(' + color + ',.8)');
+          glow.addColorStop(.6, 'rgba(' + color + ',1)');
+          glow.addColorStop(1, 'rgba(' + color + ',0)');
+          ctx.strokeStyle = glow;
+          ctx.beginPath();
+          for (let offset = 0; offset <= span + 10; offset += 10) {
+            const x = left + Math.min(offset, span);
+            const wave = Math.sin(x / (90 + phase * 100) + t * .34 + i) * (2 + phase * 5);
+            if (offset === 0) ctx.moveTo(x, y + wave); else ctx.lineTo(x, y + wave);
+          }
+          ctx.stroke();
         }
-        ctx.stroke();
       }
     }
 
     drawCloudSea() {
       if (!this.photoTexture) return;
-      const ctx = this.ctx, h = this.height, w = this.width, ratio = this.pixelRatio;
+      const ctx = this.ctx, h = this.height, w = this.width, ratio = this.textureRatio, pad = this.texturePad;
       const top = clamp(this.sourcePoint(0, .60).y, 0, h);
-      const strip = Math.max(8, (h - top) / 55);
+      const strip = Math.max(3, (h - top) / 110);
       for (let y = top; y < h; y += strip) {
-        const size = Math.min(strip + .5, h - y);
+        const size = Math.min(strip + .6, h - y);
         const fraction = (y - top) / Math.max(1, h - top);
-        ctx.globalAlpha = Math.min(1, (y - top) / 60) * Math.min(1, this.elapsed / 1.2);
-        const dx = Math.sin(this.elapsed * .035) * (3 + fraction * 12);
-        ctx.drawImage(this.photoTexture, 0, y * ratio, w * ratio, size * ratio, dx, y, w, size);
+        const fade = Math.min(1, (y - top) / 52);
+        ctx.globalAlpha = fade * Math.min(1, this.elapsed / 1.2);
+        const dx = Math.sin(this.elapsed * .14) * (38 + fraction * 46) * fade;
+        const dy = Math.sin(this.elapsed * .19 + fraction * 2) * fraction * 5;
+        ctx.drawImage(this.photoTexture, (pad + dx) * ratio, (pad + y + dy) * ratio, w * ratio, size * ratio, 0, y, w, size);
       }
     }
 
-    drawMist(level, opacity) {
+    drawMist(level, opacity, sprite = this.mistSprite) {
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
-      for (let i = 0; i < 4; i++) {
-        const span = w * .78;
-        const x = ((i * .34 + t * .0019) % 1.6 - .45) * w;
-        const y = h * (level + Math.sin(i * 2.2) * .13) + Math.sin(t * .07 + i) * 6;
-        ctx.globalAlpha = opacity * (i % 2 ? .8 : 1);
-        ctx.drawImage(this.mistSprite, x, y - h * .12, span, h * .24);
+      for (let i = 0; i < 6; i++) {
+        const span = w * (.65 + (i % 3) * .10);
+        const speed = (w * .008 + 3) * (i % 2 ? .75 : 1);
+        // Wrap only while fully off-screen; no visible fog panel pops in.
+        const x = ((i * .23 * (w + span) + t * speed) % (w + span)) - span;
+        const y = h * (level + Math.sin(i * 2.2) * .15) + Math.sin(t * .15 + i) * 14;
+        ctx.globalAlpha = opacity * (i % 2 ? .78 : 1);
+        ctx.drawImage(sprite, x, y - h * .14, span, h * .28);
       }
     }
 
@@ -253,69 +311,90 @@
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
       ctx.lineCap = 'round';
       for (const drop of this.particles) {
-        const speed = 80 + drop.depth * 65;
-        const y = ((drop.y * (h + 40) + t * speed) % (h + 40)) - 20;
-        const x = (drop.x * (w + 50) + t * 8 * drop.depth) % (w + 50) - 25;
-        const length = 9 + drop.depth * 13;
-        ctx.globalAlpha = .10 + drop.depth * .14;
-        ctx.strokeStyle = '#e2eced';
-        ctx.lineWidth = .55 + drop.depth * .45;
+        const speed = 115 + drop.depth * 115;
+        const y = ((drop.y * (h + 90) + t * speed) % (h + 90)) - 45;
+        const x = (drop.x * (w + 100) + t * 14 * drop.depth) % (w + 100) - 50;
+        const length = 19 + drop.depth * 25;
+        ctx.globalAlpha = .24 + drop.depth * .28;
+        ctx.strokeStyle = '#e4f0f3';
+        ctx.lineWidth = .8 + drop.depth * .85;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + length * .09, y + length);
+        ctx.lineTo(x + length * .12, y + length);
         ctx.stroke();
       }
-      this.drawMist(.72, .07);
+      this.drawMist(.72, .17);
     }
 
     drawWaterfall() {
       const ctx = this.ctx, t = this.elapsed;
-      // These columns follow the actual waterfall in the credited photograph.
-      const streams = [[.365, .40], [.47, .61], [.735, .79]];
+      // Continuous columns follow the actual waterfall, while flowing ribbons
+      // and pool spray make the falling water visible through the dark shade.
+      const streams = [[.375, .402], [.49, .545], [.59, .625], [.757, .785]];
+      ctx.lineCap = 'round';
       for (const particle of this.particles) {
         const region = streams[particle.index % streams.length];
-        const phase = (particle.y + t * .07 * particle.speed) % 1;
         const x = region[0] + (region[1] - region[0]) * particle.x;
-        const start = this.sourcePoint(x, .245 + phase * .465);
-        const end = this.sourcePoint(x + Math.sin(t * .2 + particle.phase) * .002, .245 + Math.min(1, phase + .09) * .465);
-        ctx.globalAlpha = .12 * Math.sin(phase * Math.PI);
-        ctx.strokeStyle = '#ecffff';
-        ctx.lineWidth = .7 + particle.depth;
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(end.x, end.y);
-        ctx.stroke();
+        const top = this.sourcePoint(x, .245), bottom = this.sourcePoint(x, .71);
+        const phase = (particle.y + t * .19 * particle.speed) % 1;
+        const length = .12 + particle.depth * .17;
+        const y1 = .245 + phase * .465, y2 = .245 + Math.min(1, phase + length) * .465;
+        const start = this.sourcePoint(x, y1);
+        const end = this.sourcePoint(x + Math.sin(t * .4 + particle.phase) * .003, y2);
+        ctx.strokeStyle = '#e4fbff';
+        ctx.lineWidth = 1.1 + particle.depth * 2.7;
+        ctx.globalAlpha = .035;
+        ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bottom.x, bottom.y); ctx.stroke();
+        const ribbon = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+        ribbon.addColorStop(0, 'rgba(228,251,255,0)');
+        ribbon.addColorStop(.3, 'rgba(228,251,255,.9)');
+        ribbon.addColorStop(.6, 'rgba(228,251,255,1)');
+        ribbon.addColorStop(1, 'rgba(228,251,255,0)');
+        ctx.strokeStyle = ribbon;
+        ctx.globalAlpha = (.26 + particle.depth * .20) * Math.sin(phase * Math.PI);
+        ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
       }
       const base = this.sourcePoint(.54, .74);
-      ctx.globalAlpha = .10;
-      const sway = Math.sin(t * .11) * 10;
-      ctx.drawImage(this.mistSprite, base.x - this.width * .25 + sway, base.y - 25, this.width * .55, 75);
+      ctx.globalAlpha = .42;
+      const sway = Math.sin(t * .30) * 32;
+      ctx.drawImage(this.mistSprite, base.x - this.width * .31 + sway, base.y - 42, this.width * .68, 120);
+      for (let i = 0; i < 5; i++) {
+        const phase = (i / 5 + t * .07) % 1;
+        ctx.globalAlpha = (1 - phase) * .22;
+        ctx.strokeStyle = '#c9f2ef'; ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(base.x + Math.sin(i * 2) * 38, base.y + phase * 18, 18 + phase * 90, 2 + phase * 8, 0, 0, TAU);
+        ctx.stroke();
+      }
     }
 
     drawStars() {
       const ctx = this.ctx, t = this.elapsed;
       for (const star of this.particles) {
         const x = star.x * this.width, y = star.y * this.height * .68;
-        ctx.globalAlpha = .08 + (.5 + .5 * Math.sin(t * .32 * star.speed + star.phase)) * .16;
-        ctx.fillStyle = '#e7eefb';
-        ctx.beginPath();
-        ctx.arc(x, y, .4 + star.depth * .7, 0, TAU);
-        ctx.fill();
+        const twinkle = .5 + .5 * Math.sin(t * .55 * star.speed + star.phase);
+        const radius = 1.0 + star.depth * 1.6;
+        const glowSize = 11 + star.depth * 14;
+        ctx.globalAlpha = .22 + twinkle * .48;
+        ctx.drawImage(this.starSprite, x - glowSize / 2, y - glowSize / 2, glowSize, glowSize);
+        ctx.globalAlpha = .30 + twinkle * .60;
+        ctx.fillStyle = '#ecf5ff';
+        ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
       }
     }
 
     drawPetals() {
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
       for (const petal of this.particles) {
-        const y = ((petal.y * (h + 40) + t * (8 + 10 * petal.depth)) % (h + 40)) - 20;
-        const x = ((petal.x * (w + 60) + t * 5 * petal.speed) % (w + 60)) - 30 + Math.sin(t * .4 + petal.phase) * 12;
+        const y = ((petal.y * (h + 70) + t * (15 + 19 * petal.depth)) % (h + 70)) - 35;
+        const x = ((petal.x * (w + 100) + t * 12 * petal.speed) % (w + 100)) - 50 + Math.sin(t * .55 + petal.phase) * 22;
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(Math.sin(t * .35 + petal.phase) * .7 + petal.phase);
-        ctx.globalAlpha = .20 + petal.depth * .25;
-        ctx.fillStyle = '#f5d9df';
+        ctx.rotate(Math.sin(t * .55 + petal.phase) * .85 + petal.phase);
+        ctx.globalAlpha = .48 + petal.depth * .30;
+        ctx.fillStyle = petal.index % 3 ? '#f7d4df' : '#fff0f2';
         ctx.beginPath();
-        ctx.ellipse(0, 0, 1.8 + petal.depth * 2.3, 1 + petal.depth * 1.2, 0, 0, TAU);
+        ctx.ellipse(0, 0, 3.4 + petal.depth * 4.5, 1.9 + petal.depth * 2.6, 0, 0, TAU);
         ctx.fill();
         ctx.restore();
       }
@@ -323,14 +402,13 @@
 
     drawDust() {
       const ctx = this.ctx, w = this.width, h = this.height, t = this.elapsed;
+      this.drawMist(.78, .32, this.dustSprite);
       for (const grain of this.particles) {
-        const x = ((grain.x * (w + 30) + t * (5 + 6 * grain.depth)) % (w + 30)) - 15;
-        const y = h * (.58 + grain.y * .42) + Math.sin(t * .15 + grain.phase) * 5;
-        ctx.globalAlpha = .07 + grain.depth * .08;
-        ctx.fillStyle = '#e9c9a1';
-        ctx.beginPath();
-        ctx.arc(x, y, .5 + grain.depth * .7, 0, TAU);
-        ctx.fill();
+        const x = ((grain.x * (w + 50) + t * (14 + 16 * grain.depth)) % (w + 50)) - 25;
+        const y = h * (.58 + grain.y * .42) + Math.sin(t * .30 + grain.phase) * 12;
+        ctx.globalAlpha = .22 + grain.depth * .24;
+        ctx.fillStyle = '#f1d4a9';
+        ctx.beginPath(); ctx.arc(x, y, .8 + grain.depth * 1.2, 0, TAU); ctx.fill();
       }
     }
 
@@ -345,7 +423,7 @@
       document.removeEventListener('visibilitychange', this.onVisibility);
       this.reducedMotion.removeEventListener('change', this.onVisibility);
       if (this.ctx) this.ctx.clearRect(0, 0, this.width, this.height);
-      this.photoTexture = this.photo = this.mistSprite = null;
+      this.photoTexture = this.photo = this.mistSprite = this.dustSprite = this.starSprite = null;
     }
   }
 

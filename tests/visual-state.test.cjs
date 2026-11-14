@@ -27,7 +27,7 @@ test('photographs remain stationary and the environmental canvas cannot intercep
   assert.match(css, /\.ambient-world\s*\{[^}]*pointer-events:\s*none/);
   assert.match(css, /\.scene-motion,\.scene-shade\s*\{[^}]*pointer-events:\s*none/);
   assert.match(html, /<canvas\s+[^>]*id="scene-motion"/);
-  assert.match(html, /<script\s+src="scene-motion\.js"/);
+  assert.match(html, /<script\s+src="scene-motion\.js(?:\?[^\"]+)?"/);
 });
 
 test('delayed particle animation frames preserve the particle field and are frame-limited', () => {
