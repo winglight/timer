@@ -1,15 +1,18 @@
 /* Environmental scenes share one lazy WebGL renderer. UI and audio stay in DOM. */
-export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain', 'sunset', 'forest', 'blossom']);
+export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert']);
 
 // Water needs enough physical pixels to resolve fine normals and reflections.
-// Soft volumetric effects have separate budgets; the accepted cabin stays at
+// Photo detail needs enough physical pixels too; the accepted cabin stays at
 // its original quality. These limits describe allocation, not measured fps.
 const SCENE_QUALITY = {
   ocean: { density: 2, pixels: 8000000 },
   sunset: { density: 2, pixels: 8000000 },
-  mountain: { density: 1.5, pixels: 1600000 },
-  forest: { density: 1.5, pixels: 2000000 },
+  mountain: { density: 2, pixels: 4000000 },
+  forest: { density: 2, pixels: 4000000 },
   blossom: { density: 2, pixels: 4000000 },
+  waterfall: { density: 2, pixels: 4000000 },
+  starlight: { density: 2, pixels: 4000000 },
+  desert: { density: 2, pixels: 4000000 },
   cabin: { density: 1.25, pixels: 1200000 }
 };
 
@@ -43,7 +46,7 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
 
 async function createScene(options) {
   if (options.id === 'ocean') {
-    const { createOceanScene } = await import('./scenes/ocean.js?v=20261115-1');
+    const { createOceanScene } = await import('./scenes/ocean.js?v=20261115-2');
     return createOceanScene(options);
   }
   if (options.id === 'sunset') {
@@ -51,12 +54,20 @@ async function createScene(options) {
     return createLakeScene(options);
   }
   if (options.id === 'mountain') {
-    const { createCloudScene } = await import('./scenes/clouds.js?v=20261115-1');
+    const { createCloudScene } = await import('./scenes/clouds.js?v=20261115-2');
     return createCloudScene(options);
   }
   if (options.id === 'forest' || options.id === 'blossom') {
-    const { createWoodlandScene } = await import('./scenes/woodland.js?v=20261115-1');
+    const { createWoodlandScene } = await import('./scenes/woodland.js?v=20261115-2');
     return createWoodlandScene(options);
+  }
+  if (options.id === 'waterfall') {
+    const { createWaterfallScene } = await import('./scenes/waterfall.js?v=20261115-2');
+    return createWaterfallScene(options);
+  }
+  if (options.id === 'starlight' || options.id === 'desert') {
+    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-2');
+    return createLandscapeScene(options);
   }
   const { createWeatherScene } = await import('./scenes/weather.js?v=20261114-3');
   return createWeatherScene(options);

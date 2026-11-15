@@ -108,121 +108,167 @@ export const FOREST_MIST_FRAGMENT_SHADER = /* glsl */`
   }
 `;
 
-export const PETAL_VERTEX_SHADER = /* glsl */`
-  attribute vec4 aSeed;
-  attribute vec4 aMotion;
+// Inverse deformation carries the photographed flowers and their stems
+// together. The source near the lower-right branch attachment is fixed; the
+// field fades through the already-defocused background instead of cutting out
+// flowers and leaving a second, frozen copy behind them.
+export const BLOSSOM_BRANCH_FRAGMENT_SHADER = /* glsl */`
+  uniform sampler2D uPhoto;
+  uniform vec4 uCover;
+  uniform float uPhotoAspect;
   uniform float uTime;
-  uniform vec2 uResolution;
-  varying vec2 vPetalUv;
-  varying vec3 vPetalNormal;
-  varying float vOpacity;
-  varying float vTint;
-  mat3 rotateX(float a) {
-    float s = sin(a), c = cos(a);
-    return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c);
-  }
-  mat3 rotateY(float a) {
-    float s = sin(a), c = cos(a);
-    return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c);
-  }
-  mat3 rotateZ(float a) {
-    float s = sin(a), c = cos(a);
-    return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);
-  }
-  void main() {
-    float depth = aSeed.z;
-    float phase = aMotion.w * 6.283185;
-    float travel = uTime * mix(0.023, 0.047, depth) * mix(0.80, 1.20, aSeed.w);
-    // Fall and horizontal drift wrap beyond the viewport. A shared wind plus
-    // a per-petal eddy produce broad, continuous paths without synchronized sway.
-    float wind = uTime * mix(0.013, 0.035, depth);
-    vec2 centre = vec2(fract(aSeed.x + wind) * 1.32 - 0.16,
-                       fract(aSeed.y - travel) * 1.30 - 0.15);
-    centre.x += sin(uTime * 0.36 + phase) * mix(0.008, 0.036, depth);
-    centre.x += sin(uTime * 0.14 + phase * 1.7) * 0.011;
-    centre.y += sin(uTime * 0.53 + phase * 0.6) * mix(0.003, 0.012, depth);
-    float xAngle = phase + uTime * mix(0.52, 1.05, aMotion.x);
-    float yAngle = sin(uTime * mix(0.28, 0.58, aMotion.y) + phase) * 1.05;
-    float zAngle = phase * 1.8 + uTime * mix(-0.34, 0.34, aMotion.z) + sin(uTime * 0.31 + phase) * 0.36;
-    mat3 turn = rotateZ(zAngle) * rotateY(yAngle) * rotateX(xAngle);
-    float size = mix(3.0, 23.0, pow(depth, 1.65)) * mix(0.75, 1.25, aMotion.y);
-    // Pixel dimensions make petals retain their natural size on a narrow phone
-    // rather than turning into large pink disks as the source photo is cropped.
-    vec3 curved = turn * position;
-    vec2 screenUv = centre + curved.xy * size / uResolution;
-    vPetalNormal = turn * normal;
-    vPetalUv = uv;
-    vTint = aMotion.x;
-    vOpacity = mix(0.48, 0.96, depth) * smoothstep(0.0, 1.3, uTime);
-    gl_Position = vec4(screenUv * 2.0 - 1.0, 0.75 - depth * 0.5, 1.0);
-  }
-`;
+  varying vec2 vScreenUv;
 
-export const PETAL_FRAGMENT_SHADER = /* glsl */`
-  varying vec2 vPetalUv;
-  varying vec3 vPetalNormal;
-  varying float vOpacity;
-  varying float vTint;
+  float ellipseField(vec2 p, vec2 centre, vec2 radius) {
+    float distance = length((p - centre) / radius);
+    return 1.0 - smoothstep(0.68, 1.16, distance);
+  }
+  float stemField(vec2 p, vec2 a, vec2 b, float radius) {
+    vec2 ab = b - a;
+    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+    float distance = length(p - a - t * ab);
+    return 1.0 - smoothstep(radius * 0.55, radius * 1.8, distance);
+  }
   void main() {
-    vec3 normal = normalize(vPetalNormal);
-    float lighting = 0.76 + abs(dot(normal, normalize(vec3(-0.4, 0.65, 0.7)))) * 0.24;
-    float base = pow(1.0 - vPetalUv.y, 2.0);
-    vec3 pale = mix(vec3(0.95, 0.73, 0.74), vec3(0.88, 0.56, 0.62), vTint * 0.34);
-    vec3 pink = mix(pale, vec3(0.63, 0.265, 0.32), base * 0.48);
-    float vein = exp(-abs(vPetalUv.x - 0.5) * 40.0) * (1.0 - vPetalUv.y) * 0.04;
-    pink *= lighting - vein;
-    gl_FragColor = vec4(pink, vOpacity);
+    vec2 sourceUv = vScreenUv * uCover.xy + uCover.zw;
+    vec2 p = vec2(sourceUv.x, 1.0 - sourceUv.y);
+    vec2 pivot = vec2(0.576, 0.982);
+    float upperBlooms = ellipseField(p, vec2(0.456, 0.498), vec2(0.160, 0.200));
+    float lowerBlooms = ellipseField(p, vec2(0.600, 0.706), vec2(0.112, 0.180));
+    float branch = stemField(p, pivot, vec2(0.650, 0.715), 0.030);
+    branch = max(branch, stemField(p, vec2(0.650, 0.715), vec2(0.600, 0.557), 0.036));
+    branch = max(branch, stemField(p, vec2(0.600, 0.557), vec2(0.435, 0.529), 0.034));
+    float mask = max(max(upperBlooms, lowerBlooms), branch);
+    vec2 metric = (p - pivot) * vec2(uPhotoAspect, 1.0);
+    float reach = smoothstep(0.025, 0.58, length(metric));
+    float breeze = sin(uTime * 0.61) * 0.019 +
+                   (sin(uTime * 0.29 + 0.8) - sin(0.8)) * 0.008;
+    float angle = breeze * reach;
+    float c = cos(angle), s = sin(angle);
+    vec2 inverseBend = mat2(c, -s, s, c) * metric;
+    vec2 offset = (inverseBend - metric) / vec2(uPhotoAspect, 1.0);
+    // Small stem-tip flex is coupled to the same gust. It moves the real
+    // petals a fraction of the branch's travel, rather than adding confetti.
+    vec2 upperOffset = vec2(sin(uTime * 1.13), cos(uTime * 0.83) - 1.0) * 0.0009;
+    vec2 lowerOffset = vec2(sin(uTime * 0.93 + 0.5) - sin(0.5), sin(uTime * 1.07)) * 0.0007;
+    vec2 samplePoint = p + offset * mask + upperOffset * upperBlooms + lowerOffset * lowerBlooms;
+    samplePoint = clamp(samplePoint, vec2(0.0002), vec2(0.9998));
+    gl_FragColor = vec4(texture2D(uPhoto, vec2(samplePoint.x, 1.0 - samplePoint.y)).rgb, 1.0);
     #include <colorspace_fragment>
   }
 `;
 
-function randomGenerator(seed) {
-  return () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-}
-
-function petalGeometry() {
-  const rings = 5, segments = 24;
-  const positions = [0, 0, 0.07], uvs = [0.5, 0.5], indices = [];
-  for (let ring = 1; ring <= rings; ring++) {
-    const radius = ring / rings;
-    for (let segment = 0; segment < segments; segment++) {
-      const angle = segment / segments * Math.PI * 2;
-      const cosine = Math.cos(angle), sine = Math.sin(angle);
-      const x = sine * (0.39 + cosine * 0.09) * radius;
-      const notch = 0.095 * Math.exp(-Math.pow(sine / 0.20, 2)) * Math.max(0, cosine);
-      const y = (cosine * 0.53 - notch) * radius;
-      const z = 0.07 + 0.18 * Math.pow(x / 0.5, 2) + 0.13 * y * y - 0.09 * y;
-      positions.push(x, y, z);
-      uvs.push(x + 0.5, y + 0.5);
-      const current = 1 + (ring - 1) * segments + segment;
-      const next = 1 + (ring - 1) * segments + (segment + 1) % segments;
-      if (ring === 1) indices.push(0, next, current);
-      else {
-        const previous = current - segments, previousNext = next - segments;
-        indices.push(previous, previousNext, current, previousNext, next, current);
-      }
+export const WILDLIFE_VERTEX_SHADER = /* glsl */`
+  attribute float aAnimal;
+  uniform float uTime;
+  uniform float uPhotoAspect;
+  uniform vec4 uCover;
+  varying vec2 vSpriteUv;
+  varying vec2 vSourceUv;
+  varying float vActivity;
+  varying float vAnimal;
+  varying float vFade;
+  void main() {
+    float animal = aAnimal;
+    vec2 centre;
+    float rotation = 0.0, facing = 1.0;
+    float activity, fade = 1.0;
+    float size;
+    if (animal < 0.5) {
+      float cycle = mod(uTime, 20.0);
+      float outward = smoothstep(0.0, 6.5, cycle);
+      float homeward = smoothstep(10.0, 16.5, cycle);
+      float progress = outward - homeward;
+      centre = vec2(mix(0.395, 0.606, progress),
+                    mix(0.816, 0.768, progress) + sin(progress * 6.283185) * 0.006);
+      activity = (1.0 - smoothstep(5.8, 6.5, cycle)) * smoothstep(0.0, 0.4, cycle) +
+                 smoothstep(10.0, 10.4, cycle) * (1.0 - smoothstep(15.8, 16.5, cycle));
+      facing = cycle > 8.2 && cycle < 18.2 ? -1.0 : 1.0;
+      size = 0.030;
+    } else {
+      float cycle = mod(uTime, 16.0);
+      float progress = smoothstep(0.0, 4.0, cycle) * 0.44 + smoothstep(6.0, 11.0, cycle) * 0.56;
+      centre = vec2(0.517 + sin(progress * 3.141593) * 0.0015, mix(0.662, 0.416, progress));
+      rotation = 1.5707963;
+      activity = (1.0 - smoothstep(3.6, 4.0, cycle)) * smoothstep(0.0, 0.3, cycle) +
+                 smoothstep(6.0, 6.3, cycle) * (1.0 - smoothstep(10.6, 11.0, cycle));
+      fade = smoothstep(0.0, 0.45, cycle) * (1.0 - smoothstep(11.0, 11.8, cycle));
+      size = 0.026;
     }
+    vec2 local = (uv - vec2(0.5, 0.16)) * 2.6;
+    vSpriteUv = uv;
+    vec2 bodyPoint = local * vec2(facing, 1.0);
+    float c = cos(rotation), s = sin(rotation);
+    vec2 posed = mat2(c, s, -s, c) * bodyPoint * size;
+    vec2 sourcePoint = centre + vec2(posed.x / uPhotoAspect, -posed.y);
+    vSourceUv = vec2(sourcePoint.x, 1.0 - sourcePoint.y);
+    vec2 screen = (vSourceUv - uCover.zw) / uCover.xy;
+    gl_Position = vec4(screen * 2.0 - 1.0, 0.0, 1.0);
+    vActivity = clamp(activity, 0.0, 1.0);
+    vAnimal = animal;
+    vFade = fade;
   }
+`;
+
+export const WILDLIFE_FRAGMENT_SHADER = /* glsl */`
+  uniform sampler2D uPhoto;
+  uniform sampler2D uAnimal;
+  uniform float uTime;
+  varying vec2 vSpriteUv;
+  varying vec2 vSourceUv;
+  varying float vActivity;
+  varying float vAnimal;
+  varying float vFade;
+
+  vec4 pose(float frame, vec2 uv) {
+    float column = mod(frame, 3.0);
+    float row = floor(frame / 3.0);
+    return texture2D(uAnimal, (vec2(column, 1.0 - row) + clamp(uv, vec2(0.001), vec2(0.999))) / vec2(3.0, 2.0));
+  }
+  void main() {
+    if (vFade < 0.002) discard;
+    vec2 uv = vSpriteUv;
+    // A small tail flex continues during pauses. Paws and the lower body are
+    // fixed to the sprite baseline so the creature never slides vertically.
+    float tail = (1.0 - smoothstep(0.28, 0.45, uv.x)) * smoothstep(0.35, 0.70, uv.y);
+    uv.x += sin(uTime * 1.8 + vAnimal) * 0.008 * tail;
+    float phase = uTime * 10.0 + vAnimal * 2.0;
+    float frame = mod(floor(phase), 6.0);
+    float blend = smoothstep(0.65, 1.0, fract(phase));
+    vec4 current = pose(frame, uv), next = pose(mod(frame + 1.0, 6.0), uv);
+    // Blend premultiplied samples, retaining the generated fur's soft alpha.
+    vec4 moving = mix(vec4(current.rgb * current.a, current.a), vec4(next.rgb * next.a, next.a), blend);
+    vec4 resting = pose(0.0, uv);
+    resting.rgb *= resting.a;
+    vec4 animal = mix(resting, moving, vActivity);
+    vec3 photo = texture2D(uPhoto, vSourceUv).rgb;
+    float illumination = 0.62 + smoothstep(0.015, 0.18, dot(photo, vec3(0.2126, 0.7152, 0.0722))) * 0.24;
+    vec3 color = animal.rgb / max(animal.a, 0.001) * illumination;
+    // Cool reflected woodland light keeps the sprite in the photograph's
+    // lighting rather than looking like a bright studio cutout.
+    color *= vec3(0.87, 0.96, 0.93);
+    float leaves = smoothstep(0.007, 0.033, photo.g - photo.r) * smoothstep(0.009, 0.045, photo.g - photo.b);
+    float groundCover = (1.0 - smoothstep(0.22, 0.39, uv.y)) * leaves * (1.0 - step(0.5, vAnimal)) * 0.65;
+    float alpha = animal.a * (1.0 - groundCover);
+    if (vAnimal < 0.5) {
+      float shadow = exp(-pow((uv.x - 0.54) / 0.27, 2.0) - pow((uv.y - 0.151) / 0.026, 2.0)) * 0.27;
+      color = (color * alpha + photo * 0.32 * shadow * (1.0 - alpha)) / max(alpha + shadow * (1.0 - alpha), 0.001);
+      alpha = alpha + shadow * (1.0 - alpha);
+    }
+    if (alpha * vFade < 0.002) discard;
+    gl_FragColor = vec4(color, alpha * vFade);
+    #include <colorspace_fragment>
+  }
+`;
+
+function wildlifeGeometry() {
+  const plane = new THREE.PlaneGeometry(1, 1);
   const geometry = new THREE.InstancedBufferGeometry();
-  geometry.setIndex(indices);
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.computeVertexNormals();
-  const random = randomGenerator(617452);
-  const seeds = new Float32Array(72 * 4), motions = new Float32Array(72 * 4);
-  for (let i = 0; i < 72; i++) {
-    // The first instances already contain every depth, so density can adapt to
-    // the viewport without losing all foreground or all distant petals.
-    const depth = (i * 0.61803398875) % 1;
-    seeds.set([random(), random(), depth, random()], i * 4);
-    motions.set([random(), random(), random(), random()], i * 4);
-  }
-  geometry.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 4));
-  geometry.setAttribute('aMotion', new THREE.InstancedBufferAttribute(motions, 4));
-  geometry.instanceCount = 36;
+  geometry.index = plane.index;
+  geometry.attributes.position = plane.attributes.position;
+  geometry.attributes.uv = plane.attributes.uv;
+  geometry.setAttribute('aAnimal', new THREE.InstancedBufferAttribute(new Float32Array([0, 1]), 1));
+  geometry.instanceCount = 2;
   return geometry;
 }
 
@@ -232,66 +278,86 @@ function photoCover(width, height, sourceWidth, sourceHeight) {
   return [x, y, (1 - x) / 2, (1 - y) / 2];
 }
 
-/** Accepts an external texture for deterministic rendering tests; ownership of
- *  an injected texture stays with the caller. Blossom petals need no texture. */
-export async function createWoodlandScene({ id, width, height, photoUrl, photoTexture }) {
+/** Both scenes use the original photograph. Injected textures stay owned by
+ * their caller; geometries, materials and loaded textures belong to the scene. */
+export async function createWoodlandScene({ id, width, height, photoUrl, photoTexture, animalTexture }) {
   if (id !== 'forest' && id !== 'blossom') throw new Error('Unsupported woodland scene: ' + id);
-  let texture = null, ownsPhoto = false, sourceWidth = 1, sourceHeight = 1;
-  if (id === 'forest') {
-    ownsPhoto = !photoTexture;
-    texture = photoTexture || await new THREE.TextureLoader().loadAsync(photoUrl);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = texture.magFilter = THREE.LinearFilter;
-    texture.generateMipmaps = false;
-    sourceWidth = texture.image?.naturalWidth || texture.image?.width;
-    sourceHeight = texture.image?.naturalHeight || texture.image?.height;
-    if (!(sourceWidth > 0 && sourceHeight > 0)) {
-      if (ownsPhoto) texture.dispose();
-      throw new Error('Forest photograph has no dimensions');
+  const ownsPhoto = !photoTexture;
+  const texture = photoTexture || await new THREE.TextureLoader().loadAsync(photoUrl);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  const sourceWidth = texture.image?.naturalWidth || texture.image?.width;
+  const sourceHeight = texture.image?.naturalHeight || texture.image?.height;
+  if (!(sourceWidth > 0 && sourceHeight > 0)) {
+    if (ownsPhoto) texture.dispose();
+    throw new Error('Woodland photograph has no dimensions');
+  }
+  let animal = null, ownsAnimal = false;
+  if (id === 'forest' && animalTexture !== null) {
+    if (animalTexture) animal = animalTexture;
+    else {
+      try {
+        animal = await new THREE.TextureLoader().loadAsync(new URL('../assets/scenes/squirrel-atlas.png', import.meta.url).href);
+        ownsAnimal = true;
+      } catch (error) {
+        // Wildlife is optional; a missing sprite must not disable the forest.
+        console.warn('Forest wildlife could not load; mist remains available.', error);
+      }
+    }
+    if (animal) {
+      animal.colorSpace = THREE.SRGBColorSpace;
+      animal.minFilter = THREE.LinearMipmapLinearFilter;
+      animal.magFilter = THREE.LinearFilter;
+      animal.generateMipmaps = true;
     }
   }
   const scene = new THREE.Scene();
-  scene.name = id === 'forest' ? 'Mist flowing between forest trunks' : 'Curved petals carried by the breeze';
+  scene.name = id === 'forest' ? 'Squirrels exploring the misty forest' : 'Photographed cherry branches moving in a breeze';
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
   camera.position.z = 2;
   const uniforms = {
     uTime: { value: 0 },
     uResolution: { value: new THREE.Vector2(width, height) },
     uPhoto: { value: texture },
+    uAnimal: { value: animal },
+    uPhotoAspect: { value: sourceWidth / sourceHeight },
     uCover: { value: new THREE.Vector4(...photoCover(width, height, sourceWidth, sourceHeight)) }
   };
-  const geometry = id === 'forest' ? new THREE.PlaneGeometry(2, 2) : petalGeometry();
-  const material = new THREE.ShaderMaterial({
-    name: id === 'forest' ? 'forest-advected-mist' : 'blossom-curved-petals',
-    uniforms,
-    vertexShader: id === 'forest' ? SCREEN_VERTEX : PETAL_VERTEX_SHADER,
-    fragmentShader: id === 'forest' ? FOREST_MIST_FRAGMENT_SHADER : PETAL_FRAGMENT_SHADER,
-    side: THREE.DoubleSide,
-    transparent: true, depthTest: false, depthWrite: false,
-    blending: THREE.NormalBlending, toneMapped: false
-  });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.frustumCulled = false;
-  scene.add(mesh);
+  const resources = [];
+  function addMesh(name, geometry, vertexShader, fragmentShader, transparent, order) {
+    const material = new THREE.ShaderMaterial({ name, uniforms, vertexShader, fragmentShader,
+      side: THREE.DoubleSide, transparent, depthTest: false, depthWrite: false,
+      blending: THREE.NormalBlending, toneMapped: false });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = order;
+    scene.add(mesh);
+    resources.push(geometry, material);
+  }
+  if (id === 'forest') {
+    addMesh('forest-advected-mist', new THREE.PlaneGeometry(2, 2), SCREEN_VERTEX, FOREST_MIST_FRAGMENT_SHADER, true, 0);
+    if (animal) addMesh('forest-grounded-wildlife', wildlifeGeometry(), WILDLIFE_VERTEX_SHADER, WILDLIFE_FRAGMENT_SHADER, true, 1);
+  } else {
+    addMesh('blossom-anchored-branch-bend', new THREE.PlaneGeometry(2, 2), SCREEN_VERTEX, BLOSSOM_BRANCH_FRAGMENT_SHADER, false, 0);
+  }
   let disposed = false;
-  const handle = {
+  return {
     scene, camera,
     update(time) { if (!disposed) uniforms.uTime.value = time; },
     resize(nextWidth, nextHeight) {
       if (disposed) return;
       uniforms.uResolution.value.set(nextWidth, nextHeight);
       uniforms.uCover.value.set(...photoCover(nextWidth, nextHeight, sourceWidth, sourceHeight));
-      if (id === 'blossom') geometry.instanceCount = Math.max(26, Math.min(72, Math.round(nextWidth * nextHeight / 16500)));
     },
     dispose() {
       if (disposed) return;
       disposed = true;
-      geometry.dispose();
-      material.dispose();
+      resources.forEach(resource => resource.dispose());
       if (ownsPhoto) texture.dispose();
+      if (ownsAnimal) animal.dispose();
       scene.clear();
     }
   };
-  handle.resize(width, height);
-  return handle;
 }

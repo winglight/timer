@@ -24,8 +24,9 @@ test('weather masks stay attached to source photo coordinates through portrait a
 });
 
 const sizes = {
-  ocean: [2400, 1600], cabin: [1440, 2160], mountain: [1920, 1280],
-  sunset: [2400, 1800], forest: [2400, 1600], blossom: [2400, 1590]
+  ocean: [2400, 1600], cabin: [1440, 2160], mountain: [2400, 1600],
+  sunset: [2400, 1800], forest: [2400, 1600], blossom: [2400, 1590],
+  waterfall: [2400, 1600], starlight: [2400, 1526], desert: [2400, 1590]
 };
 
 async function buildScene(id, width = 390, height = 844) {
@@ -33,18 +34,22 @@ async function buildScene(id, width = 390, height = 844) {
   const factories = {
     ocean: ['ocean', 'createOceanScene'], cabin: ['weather', 'createWeatherScene'],
     mountain: ['clouds', 'createCloudScene'], sunset: ['lake', 'createLakeScene'],
-    forest: ['woodland', 'createWoodlandScene'], blossom: ['woodland', 'createWoodlandScene']
+    forest: ['woodland', 'createWoodlandScene'], blossom: ['woodland', 'createWoodlandScene'],
+    waterfall: ['waterfall', 'createWaterfallScene'],
+    starlight: ['landscape', 'createLandscapeScene'], desert: ['landscape', 'createLandscapeScene']
   };
   const [file, name] = factories[id];
   const factory = (await import(moduleURL('scenes/' + file + '.js')))[name];
   const texture = new THREE.Texture({ width: sizes[id][0], height: sizes[id][1] });
-  const handle = await factory({ id, width, height, photoTexture: texture });
-  return { handle, texture };
+  const animalTexture = id === 'forest' ? new THREE.Texture({ width: 1536, height: 1024 }) : null;
+  const borrowedTextures = [texture, animalTexture].filter(Boolean);
+  const handle = await factory({ id, width, height, photoTexture: texture, animalTexture });
+  return { handle, texture, borrowedTextures, disposeBorrowed() { borrowedTextures.forEach(value => value.dispose()); } };
 }
 
 test('scene factories animate the environment while keeping cameras and photograph placement fixed', async () => {
   for (const id of Object.keys(sizes)) {
-    const { handle, texture } = await buildScene(id);
+    const { handle, disposeBorrowed } = await buildScene(id);
     const transforms = [];
     handle.scene.traverse(object => transforms.push([object.position.toArray(), object.quaternion.toArray(), object.scale.toArray()]));
     const cameraPosition = handle.camera.position.toArray();
@@ -56,19 +61,19 @@ test('scene factories animate the environment while keeping cameras and photogra
     assert.deepEqual(handle.camera.position.toArray(), cameraPosition);
     assert.deepEqual(handle.camera.quaternion.toArray(), cameraRotation);
     assert.ok(handle.scene.children.every(object => object.material.uniforms.uTime.value === 20));
-    handle.dispose(); texture.dispose();
+    handle.dispose(); disposeBorrowed();
   }
 });
 
 test('each scene releases owned geometry, materials and generated textures without disposing borrowed photographs', async () => {
   for (const id of Object.keys(sizes)) {
-    const { handle, texture } = await buildScene(id, 1280, 800);
+    const { handle, borrowedTextures, disposeBorrowed } = await buildScene(id, 1280, 800);
     let borrowedDisposals = 0;
-    texture.addEventListener('dispose', () => borrowedDisposals++);
+    borrowedTextures.forEach(texture => texture.addEventListener('dispose', () => borrowedDisposals++));
     const resources = new Map();
     handle.scene.traverse(object => {
       const generatedTextures = Object.values(object.material?.uniforms || {}).map(uniform => uniform.value)
-        .filter(value => value?.isTexture && value !== texture);
+        .filter(value => value?.isTexture && !borrowedTextures.includes(value));
       for (const resource of [object.geometry, object.material, ...generatedTextures]) {
         if (!resource || resources.has(resource)) continue;
         resources.set(resource, 0);
@@ -76,18 +81,73 @@ test('each scene releases owned geometry, materials and generated textures witho
       }
     });
     handle.dispose();
+    handle.dispose();
     assert.ok(resources.size > 0);
     assert.ok([...resources.values()].every(count => count === 1), id + ' releases every generated resource once');
     assert.equal(borrowedDisposals, 0, id + ' retains caller texture ownership');
     assert.equal(handle.scene.children.length, 0);
+    disposeBorrowed();
+  }
+});
+
+test('a missing wildlife atlas leaves forest mist running and keeps photograph ownership intact', async () => {
+  const THREE = await import(moduleURL('vendor/three.module.js'));
+  const { createWoodlandScene } = await import(moduleURL('scenes/woodland.js'));
+  const texture = new THREE.Texture({ width: 2400, height: 1600 });
+  const originalLoad = THREE.TextureLoader.prototype.loadAsync;
+  const originalWarn = console.warn;
+  let loads = 0, warnings = 0, photoDisposals = 0;
+  texture.addEventListener('dispose', () => photoDisposals++);
+  THREE.TextureLoader.prototype.loadAsync = async function(url) {
+    assert.ok(url.endsWith('/assets/scenes/squirrel-atlas.png'));
+    loads++;
+    throw new Error('Atlas unavailable');
+  };
+  console.warn = () => warnings++;
+  let handle;
+  try {
+    handle = await createWoodlandScene({ id: 'forest', width: 390, height: 844, photoTexture: texture });
+    handle.update(5);
+    assert.equal(loads, 1);
+    assert.equal(warnings, 1);
+    assert.equal(handle.scene.children.length, 1);
+    assert.equal(handle.scene.children[0].material.uniforms.uTime.value, 5);
+    handle.dispose();
+    assert.equal(photoDisposals, 0);
+  } finally {
+    handle?.dispose();
+    THREE.TextureLoader.prototype.loadAsync = originalLoad;
+    console.warn = originalWarn;
+    texture.dispose();
+  }
+});
+
+test('forest disposal releases a successfully loaded wildlife atlas only once', async () => {
+  const THREE = await import(moduleURL('vendor/three.module.js'));
+  const { createWoodlandScene } = await import(moduleURL('scenes/woodland.js'));
+  const texture = new THREE.Texture({ width: 2400, height: 1600 });
+  const animal = new THREE.Texture({ width: 1536, height: 1024 });
+  const originalLoad = THREE.TextureLoader.prototype.loadAsync;
+  let disposals = 0;
+  animal.addEventListener('dispose', () => disposals++);
+  THREE.TextureLoader.prototype.loadAsync = async () => animal;
+  let handle;
+  try {
+    handle = await createWoodlandScene({ id: 'forest', width: 390, height: 844, photoTexture: texture });
+    assert.equal(handle.scene.children.length, 2);
+    handle.dispose(); handle.dispose();
+    assert.equal(disposals, 1);
+  } finally {
+    handle?.dispose();
+    THREE.TextureLoader.prototype.loadAsync = originalLoad;
     texture.dispose();
   }
 });
 
 test('photo-based scenes keep mattes aligned after rotation and wide-screen cropping', async () => {
   const { computePhotoCover } = await import(moduleURL('scenes/weather.js'));
-  for (const id of ['cabin', 'mountain', 'sunset', 'forest']) {
-    const { handle, texture } = await buildScene(id);
+  for (const id of Object.keys(sizes)) {
+    const { handle, disposeBorrowed } = await buildScene(id);
     for (const [width, height] of [[390, 844], [844, 390], [1280, 800], [2560, 1080]]) {
       handle.resize(width, height);
       const expected = computePhotoCover(width, height, ...sizes[id]);
@@ -96,13 +156,13 @@ test('photo-based scenes keep mattes aligned after rotation and wide-screen crop
         if (cover) assert.deepEqual(cover.toArray(), expected, id);
       });
     }
-    handle.dispose(); texture.dispose();
+    handle.dispose(); disposeBorrowed();
   }
 });
 
-test('dense water and curved petals contain finite geometry and valid triangle indices', async () => {
-  for (const id of ['ocean', 'sunset', 'blossom']) {
-    const { handle, texture } = await buildScene(id, 2560, 1440);
+test('scene geometry has finite positions, valid indices and bounded instance attributes', async () => {
+  for (const id of Object.keys(sizes)) {
+    const { handle, disposeBorrowed } = await buildScene(id, 2560, 1440);
     handle.scene.traverse(object => {
       if (!object.geometry) return;
       const { attributes, index, instanceCount } = object.geometry;
@@ -115,6 +175,6 @@ test('dense water and curved petals contain finite geometry and valid triangle i
         }
       }
     });
-    handle.dispose(); texture.dispose();
+    handle.dispose(); disposeBorrowed();
   }
 });

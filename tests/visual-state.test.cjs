@@ -25,13 +25,12 @@ test('photographs remain stationary and the environmental canvas cannot intercep
   assert.doesNotMatch(photo[1], /animation|transform|filter/, 'the full-size photo does not continuously recomposite');
   assert.doesNotMatch(css, /@keyframes\s+scene-camera-drift/);
   assert.match(css, /\.ambient-world\s*\{[^}]*pointer-events:\s*none/);
-  assert.match(css, /\.scene-motion,\.scene-shade\s*\{[^}]*pointer-events:\s*none/);
-  assert.match(html, /<canvas\s+[^>]*id="scene-motion"/);
-  assert.match(html, /<script\s+src="scene-motion\.js(?:\?[^\"]+)?"/);
+  assert.match(css, /\.scene-shade\s*\{[^}]*pointer-events:\s*none/);
+  assert.doesNotMatch(html, /scene-motion/, 'no second ambient renderer runs over the photographic animation');
   assert.match(html, /<canvas\s+[^>]*id="scene-webgl"/);
   assert.match(html, /<script\s+type="module"\s+src="scene-runtime\.js(?:\?[^\"]+)?"/);
   assert.match(css, /\.scene-webgl\s*\{[^}]*pointer-events:\s*none/);
-  assert.match(css, /prefers-reduced-motion:reduce\)[^\n]*\.scene-motion,\.scene-webgl\{display:none\}/);
+  assert.match(css, /prefers-reduced-motion:reduce\)[^\n]*\.scene-webgl\{display:none\}/);
 });
 
 test('delayed particle animation frames preserve the particle field and are frame-limited', () => {
@@ -69,7 +68,7 @@ test('delayed particle animation frames preserve the particle field and are fram
 });
 
 test('environmental movement is independent of practice status and unnecessary forced UI layers are absent', () => {
-  assert.doesNotMatch(css, /body[^\n]*data-status[^\n]*\.(?:scene-layer|scene-motion)/);
+  assert.doesNotMatch(css, /body[^\n]*data-status[^\n]*\.(?:scene-layer|scene-webgl)/);
   const link = css.match(/\.studio-link\s*\{([^}]*)\}/);
   const header = css.match(/\.header\{([^}]*)\}/);
   const stage = css.match(/\.stage\s*\{([^}]*)\}/);

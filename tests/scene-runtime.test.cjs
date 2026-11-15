@@ -122,7 +122,7 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
   assert.equal(h.frames.size, 1);
   h.frame(0); h.frame(40);
   assert.ok(h.renderer.renders.length > 0);
-  for (const id of ['cabin', 'mountain', 'sunset', 'forest', 'blossom', 'ocean']) {
+  for (const id of ['cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert', 'ocean']) {
     h.scene(id); await h.ready(); h.runtime.syncPlayback(); h.runtime.syncPlayback();
     assert.equal(h.frames.size, 1, id + ' must have one frame owner');
   }
@@ -134,8 +134,8 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
   assert.equal(h.renderer.disposed, 1);
 });
 
-test('off, legacy, hidden and reduced-motion starts do not allocate a GPU renderer', async () => {
-  for (const options of [{ scene: 'none' }, { scene: 'waterfall' }, { hidden: true }, { reduced: true }]) {
+test('off, unknown, hidden and reduced-motion starts do not allocate a GPU renderer', async () => {
+  for (const options of [{ scene: 'none' }, { scene: 'unknown' }, { hidden: true }, { reduced: true }]) {
     const h = await harness(options); await h.ready();
     assert.equal(h.rendererCreates, 0, JSON.stringify(options));
     assert.equal(h.frames.size, 0);
@@ -344,13 +344,13 @@ test('water renders at high density while scene switches restore each effect bud
   const { scenePixelRatio } = await import(runtimeURL);
   const h = await harness({ width: 390, height: 844, dpr: 3 }); await h.ready();
   assert.equal(h.renderer.sizes.at(-1).pixelRatio, 2, 'fine ocean reflections resolve at 2x CSS density');
-  for (const [id, density] of [['cabin', 1.25], ['mountain', 1.5], ['sunset', 2], ['forest', 1.5], ['blossom', 2]]) {
+  for (const [id, density] of [['cabin', 1.25], ['mountain', 2], ['sunset', 2], ['forest', 2], ['blossom', 2], ['waterfall', 2], ['starlight', 2], ['desert', 2]]) {
     h.scene(id); await h.ready();
     assert.equal(h.renderer.sizes.at(-1).pixelRatio, density, id);
     assert.equal(h.frames.size, 1);
   }
   assert.equal(h.rendererCreates, 1, 'quality switches reuse the same context');
-  for (const [id, budget] of [['ocean', 8000000], ['sunset', 8000000], ['cabin', 1200000], ['mountain', 1600000], ['forest', 2000000], ['blossom', 4000000]]) {
+  for (const [id, budget] of [['ocean', 8000000], ['sunset', 8000000], ['cabin', 1200000], ['mountain', 4000000], ['forest', 4000000], ['blossom', 4000000], ['waterfall', 4000000], ['starlight', 4000000], ['desert', 4000000]]) {
     for (const [width, height] of [[390, 844], [1920, 1080], [3840, 2160]]) {
       const ratio = scenePixelRatio(id, width, height, 3);
       assert.ok(width * height * ratio ** 2 <= budget + 1, id + ' stays within its surface budget');
