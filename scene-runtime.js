@@ -1,5 +1,5 @@
 /* Environmental scenes share one lazy WebGL renderer. UI and audio stay in DOM. */
-export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert']);
+export const GPU_SCENES = new Set(['ocean', 'cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert', 'hearth', 'orbital']);
 
 // Water needs enough physical pixels to resolve fine normals and reflections.
 // Photo detail needs enough physical pixels too; the accepted cabin stays at
@@ -13,6 +13,10 @@ const SCENE_QUALITY = {
   waterfall: { density: 2, pixels: 4000000 },
   starlight: { density: 2, pixels: 4000000 },
   desert: { density: 2, pixels: 4000000 },
+  // The fire integrates a small volume; bound its work independently of the
+  // less expensive photographic overlays and ray-sphere Earth.
+  hearth: { density: 1.5, pixels: 2000000 },
+  orbital: { density: 2, pixels: 4000000 },
   cabin: { density: 1.25, pixels: 1200000 }
 };
 
@@ -53,6 +57,14 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
 }
 
 async function createScene(options) {
+  if (options.id === 'hearth') {
+    const { createHearthScene } = await import('./scenes/hearth.js?v=20261115-hearth-orbit-1');
+    return createHearthScene(options);
+  }
+  if (options.id === 'orbital') {
+    const { createOrbitalScene } = await import('./scenes/orbital.js?v=20261115-hearth-orbit-1');
+    return createOrbitalScene(options);
+  }
   if (options.id === 'ocean') {
     const { createOceanScene } = await import('./scenes/ocean.js?v=20261115-2');
     return createOceanScene(options);
@@ -218,7 +230,9 @@ export class SceneRuntime {
     const generation = this.generation, id = this.scene;
     // Capture the selected image before any asynchronous import or texture load.
     const image = this.world.querySelector('[data-scene-layer="' + id + '"] img');
-    const photoUrl = image ? (image.currentSrc || image.src) : '';
+    // Some scenes use a rendered still for the fallback but sample an unlit
+    // source plate, so frozen fire/clouds never get baked into live motion.
+    const photoUrl = image ? (image.dataset?.sceneTexture || image.currentSrc || image.src) : '';
     const task = (async () => {
       let handle = null;
       try {

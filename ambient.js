@@ -6,7 +6,7 @@
  const sceneMenu=$('scene-menu'),soundMenu=$('sound-menu');
  if(!world||!volume||!volumeValue)return;
  const KEY='breathing-ambience-v2',LEGACY_KEY='breathing-ambience-v1';
- const sceneLabels={none:['关闭','Off'],sunset:['日落湖畔','Sunset lake'],ocean:['海浪与晚霞','Ocean at dusk'],mountain:['云海山顶','Sea of clouds'],cabin:['细雨林中小屋','Rainy forest cabin'],forest:['森林晨雾','Misty forest'],waterfall:['静谧溪谷','Quiet waterfall'],starlight:['星空夜色','Starry night'],blossom:['樱花微风','Cherry blossoms'],desert:['沙漠暮色','Desert dusk']};
+ const sceneLabels={none:['关闭','Off'],sunset:['日落湖畔','Sunset lake'],ocean:['海浪与晚霞','Ocean at dusk'],mountain:['云海山顶','Sea of clouds'],cabin:['细雨林中小屋','Rainy forest cabin'],forest:['森林晨雾','Misty forest'],waterfall:['静谧溪谷','Quiet waterfall'],starlight:['星空夜色','Starry night'],blossom:['樱花微风','Cherry blossoms'],desert:['沙漠暮色','Desert dusk'],hearth:['木屋中的火炉','Cabin fireplace'],orbital:['空间站 · 地球','Orbital Earth']};
  const tracks={
   ocean:{label:['海浪轻拍沙滩','Gentle ocean waves'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Oceanwavescrushing.ogg'},
   rain:{label:['轻柔雨声','Soft rainfall'],url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Sound_of_light_rainfall.ogg'},

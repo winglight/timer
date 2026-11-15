@@ -15,8 +15,8 @@ https://timer.broyustudio.com/
 - Share a high-resolution practice snapshot to X
 - Browser-local persistence with migration from legacy breath_settings and breath_history data
 - Optional Cloudflare R2 synchronization for settings and practice history
-- Nine ambience scenes: sunset lake, ocean at dusk, sea of clouds, forest cabin, misty forest, waterfall, starry night, cherry blossoms, and desert dusk
-- Nine three.js scenes with motion attached to their photographed surroundings: surf and reflections, bright cloud banks, rain, woodland wildlife, bending blossom branches, flowing falls, a drifting star field, and canyon wind
+- Eleven ambience scenes: sunset lake, ocean at dusk, sea of clouds, forest cabin, misty forest, waterfall, starry night, cherry blossoms, desert dusk, a cabin fireplace, and an orbital Earth observatory
+- Eleven three.js scenes with environmental motion: water and reflections, cloud banks, rain, woodland wildlife, bending blossom branches, flowing falls, stars, canyon wind, fire and coherent room lighting, and a real-time rotating Earth with simulated ocean cyclones
 - All backgrounds run before and during practice and can be switched off independently
 - Seven real field recordings for waves, rain, birds, forest ambience, a brook, campfire, and breeze; no synthesized noise
 - Independent scene and sound pickers, volume adjustment, saved preferences, and automatic restoration of enabled audio with a first-interaction fallback when the browser blocks autoplay
@@ -45,6 +45,9 @@ The app uses vanilla HTML, CSS, and JavaScript.
 - scenes/woodland.js — woodland wildlife, light mist and wind-bent photographic blossoms
 - scenes/waterfall.js — masked photographic water flow, refraction and pool ripples
 - scenes/landscape.js — moving photographic stars and canyon clouds, ground wind and heat shimmer
+- scenes/hearth.js — turbulent fire, glowing wood fissures, and coordinated room light and furniture shadows
+- scenes/orbital.js — panoramic station interior, shaded globe, atmosphere, stars and simulated ocean cyclones
+- scenes/orbital-model.js — wall-clock sidereal rotation, reproducible ocean weather and responsive globe layout
 - vendor/ — locally served three.js 0.187.0 and its MIT license
 - assets/scenes/ — same-origin scene photographs and source credits
 - share.js — practice snapshot generation and sharing
@@ -66,12 +69,13 @@ Mountain clouds use a 2400-pixel source photograph with continuous local drift a
 
 The waterfall transports the photographed water within masks, preserving rocks and foliage, with a responsive pool surface. The star field itself turns slowly and its real highlights twinkle; the mountain silhouette is fixed. Canyon clouds drift over stable rock formations, with low sand streamers and restrained distant heat shimmer. These are photographic 2.5D effects and water geometry, not a full fluid or atmospheric simulation.
 
-All nine scenes share one WebGL renderer and one animation loop targeting 30 fps. The obsolete Canvas overlays have been removed. Water uses a higher drawing-buffer budget for reflections, and photographic detail has its own allocation limit:
+All eleven scenes share one WebGL renderer and one animation loop targeting 30 fps. The obsolete Canvas overlays have been removed. Water uses a higher drawing-buffer budget for reflections, and photographic detail has its own allocation limit:
 
 | Scenes | Maximum pixel density | Drawing surface budget |
 | --- | ---: | ---: |
 | Ocean and sunset lake | 2 | 8 megapixels |
-| Clouds, forest, blossoms, waterfall, stars and desert | 2 | 4 megapixels |
+| Clouds, forest, blossoms, waterfall, stars, desert and orbital Earth | 2 | 4 megapixels |
+| Cabin fireplace (volume flame) | 1.5 | 2 megapixels |
 | Cabin rain | 1.25 | 1.2 megapixels |
 
 The density never exceeds the device's own pixel ratio. A 390 × 844 viewport on a high-density phone now draws water at 780 × 1688 pixels. Quality changes reuse the same renderer, and selecting cabin rain restores its previous budget. These are allocation limits, not measured mobile performance or battery-life results.
@@ -79,6 +83,16 @@ The density never exceeds the device's own pixel ratio. A 390 × 844 viewport on
 Motion runs while the page is visible, including before a breathing session starts. Background Off, page suspension and the operating system's reduced-motion setting stop animation. A failed module/texture load, shader error or lost WebGL context leaves the still photograph available. Scene switches discard stale asynchronous results and dispose obsolete GPU resources. The timer and independent ambient audio remain usable.
 
 Tests cover scene routing, asynchronous load races, paused clocks, fallback and GPU resource cleanup. Visual quality is also checked using actual shader/geometry renders; movement counts alone do not establish realism. Mobile-browser sustained performance and power use require device testing.
+
+## Cabin fireplace and orbital Earth
+
+**Cabin fireplace** keeps the photographic timber, furniture and masonry stationary. The fire has changing silhouettes and rising sparks; the fuel bed has glowing red embers and irregular fissures. One continuous firelight source drives the flame, reflected light on walls and floor, and soft furniture shadows. A rendered still supplies a lit fireplace when reduced motion is enabled or WebGL is unavailable. `data-scene-texture` points the live shader to the separate unlit source photograph, so a frozen flame is never embedded in its moving fire.
+
+**Orbital Earth** puts the complete globe inside a panoramic space-station window, surrounded by stars and subtle instrument lighting. The globe stays circular and entirely in view on portrait screens. Its axial rotation is computed from wall-clock time at one revolution per mean sidereal day (86,164.0905 seconds, about 23 h 56 m 4 s); switching scenes or returning from a background tab does not reset the phase. This is an artistic inertial presentation at geosynchronous altitude, **not a literal Earth-fixed geostationary window view or an orbital simulator**: a real geostationary observer stays over the same longitude. See [NASA's satellite-orbit explanation](https://science.nasa.gov/earth/earth-observatory/catalog-of-earth-satellite-orbits/) and [sidereal-day explanation](https://science.gsfc.nasa.gov/attic/cosmicopia.gsfc.nasa.gov/qa_earth.html).
+
+The ocean cyclones are seeded visual simulations with changing positions, sizes and lifetimes, with opposite circulation in the two hemispheres. Their evolution is compressed into minutes for ambient viewing; they do not represent current weather. Only the Earth's axial rotation follows the real-time rate. Landscape and portrait rendered stills preserve the whole globe when animation is disabled. Scene selection and ambient sound remain independent; the existing campfire recording can accompany the fireplace.
+
+New assets are hosted with the application. [Asset provenance](assets/scenes/new-scenes.md) includes the generated cabin's prompt and the Earth imagery sources.
 
 ## Language
 

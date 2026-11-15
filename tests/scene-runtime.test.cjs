@@ -76,6 +76,7 @@ async function harness(options = {}) {
     dataset: { scene: options.scene ?? 'ocean' }, classList,
     getBoundingClientRect: () => ({ width, height }),
     querySelector(selector) {
+      if (options.image) return options.image;
       const id = selector.match(/(?:scene-layer|scene)=?["']?([a-z]+)/)?.[1] || this.dataset.scene;
       return { currentSrc: '/assets/scenes/' + id + '.jpg', src: '/assets/scenes/' + id + '.jpg' };
     }
@@ -122,7 +123,7 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
   assert.equal(h.frames.size, 1);
   h.frame(0); h.frame(40);
   assert.ok(h.renderer.renders.length > 0);
-  for (const id of ['cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert', 'ocean']) {
+  for (const id of ['cabin', 'mountain', 'sunset', 'forest', 'blossom', 'waterfall', 'starlight', 'desert', 'hearth', 'orbital', 'ocean']) {
     h.scene(id); await h.ready(); h.runtime.syncPlayback(); h.runtime.syncPlayback();
     assert.equal(h.frames.size, 1, id + ' must have one frame owner');
   }
@@ -135,12 +136,27 @@ test('GPU scenes start before practice, share one renderer and keep exactly one 
 });
 
 test('off, unknown, hidden and reduced-motion starts do not allocate a GPU renderer', async () => {
-  for (const options of [{ scene: 'none' }, { scene: 'unknown' }, { hidden: true }, { reduced: true }]) {
+  for (const options of [{ scene: 'none' }, { scene: 'unknown' }, { hidden: true }, { reduced: true }, { scene: 'hearth', reduced: true }, { scene: 'orbital', reduced: true }]) {
     const h = await harness(options); await h.ready();
     assert.equal(h.rendererCreates, 0, JSON.stringify(options));
     assert.equal(h.frames.size, 0);
     h.runtime.destroy();
   }
+});
+
+test('a scene may animate an unlit source while retaining a different rendered fallback image', async () => {
+  const h = await harness({
+    scene: 'hearth',
+    image: {
+      currentSrc: 'https://timer.example/assets/scenes/hearth-still.jpg',
+      src: 'https://timer.example/assets/scenes/hearth-still.jpg',
+      dataset: { sceneTexture: 'assets/scenes/hearth.jpg' }
+    }
+  });
+  await h.ready();
+  assert.equal(h.requested[0].photoUrl, 'assets/scenes/hearth.jpg', 'the fire is not baked into both the still and animated image');
+  assert.equal(h.frames.size, 1);
+  h.runtime.destroy();
 });
 
 test('a slow previous scene cannot replace the most recently selected scene', async () => {
@@ -344,13 +360,13 @@ test('water renders at high density while scene switches restore each effect bud
   const { scenePixelRatio } = await import(runtimeURL);
   const h = await harness({ width: 390, height: 844, dpr: 3 }); await h.ready();
   assert.equal(h.renderer.sizes.at(-1).pixelRatio, 2, 'fine ocean reflections resolve at 2x CSS density');
-  for (const [id, density] of [['cabin', 1.25], ['mountain', 2], ['sunset', 2], ['forest', 2], ['blossom', 2], ['waterfall', 2], ['starlight', 2], ['desert', 2]]) {
+  for (const [id, density] of [['cabin', 1.25], ['mountain', 2], ['sunset', 2], ['forest', 2], ['blossom', 2], ['waterfall', 2], ['starlight', 2], ['desert', 2], ['hearth', 1.5], ['orbital', 2]]) {
     h.scene(id); await h.ready();
     assert.equal(h.renderer.sizes.at(-1).pixelRatio, density, id);
     assert.equal(h.frames.size, 1);
   }
   assert.equal(h.rendererCreates, 1, 'quality switches reuse the same context');
-  for (const [id, budget] of [['ocean', 8000000], ['sunset', 8000000], ['cabin', 1200000], ['mountain', 4000000], ['forest', 4000000], ['blossom', 4000000], ['waterfall', 4000000], ['starlight', 4000000], ['desert', 4000000]]) {
+  for (const [id, budget] of [['ocean', 8000000], ['sunset', 8000000], ['cabin', 1200000], ['mountain', 4000000], ['forest', 4000000], ['blossom', 4000000], ['waterfall', 4000000], ['starlight', 4000000], ['desert', 4000000], ['hearth', 2000000], ['orbital', 4000000]]) {
     for (const [width, height] of [[390, 844], [1920, 1080], [3840, 2160]]) {
       const ratio = scenePixelRatio(id, width, height, 3);
       assert.ok(width * height * ratio ** 2 <= budget + 1, id + ' stays within its surface budget');

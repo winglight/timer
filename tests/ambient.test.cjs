@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'ambient.js'), 'utf8');
 const KEY = 'breathing-ambience-v2';
 const soundIds = ['off', 'ocean', 'rain', 'birds', 'forest', 'brook', 'fire', 'breeze'];
-const sceneIds = ['none', 'sunset', 'ocean', 'mountain', 'cabin', 'forest', 'waterfall', 'starlight', 'blossom', 'desert'];
+const sceneIds = ['none', 'sunset', 'ocean', 'mountain', 'cabin', 'forest', 'waterfall', 'starlight', 'blossom', 'desert', 'hearth', 'orbital'];
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 const failure = name => Object.assign(new Error(name), { name });
 
@@ -115,10 +115,11 @@ function ambienceHarness(saved = { sound: 'ocean', scene: 'ocean', volume: 32 },
     document.emit(type, event, false);
   }
   return {
-    get, document, window, audio, playPlan, storage, observers,
+    get, document, window, audio, playPlan, storage, observers, layers, sceneButtons,
     saved: () => JSON.parse(storage.get(KEY) || '{}'),
     state: () => get('sound-menu').dataset.playbackState,
-    choose: id => gesture('click', buttons.get(id)), gesture,
+    choose: id => gesture('click', buttons.get(id)),
+    chooseScene: id => gesture('click', sceneButtons.find(button => button.dataset.scene === id)), gesture,
     visibility(value) { document.hidden = value; document.visibilityState = value ? 'hidden' : 'visible'; document.emit('visibilitychange'); }
   };
 }
@@ -256,4 +257,26 @@ test('a real media failure is distinct from autoplay denial and is recoverable b
 test('blocked localStorage does not prevent sound selection or playback', async () => {
   const h = ambienceHarness(null, { storageThrows: true }); h.choose('rain'); await flush();
   assert.equal(h.state(), 'playing'); assert.equal(h.audio.length, 1);
+});
+
+test('hearth and orbital selections activate one background, persist across reload and preserve audio choices', async () => {
+  const h = ambienceHarness({ scene: 'none', sound: 'fire', enabled: false, volume: 37 });
+  await flush();
+  for (const id of ['hearth', 'orbital']) {
+    h.get('scene-menu').open = true;
+    h.chooseScene(id);
+    assert.equal(h.document.body.dataset.scene, id);
+    assert.equal(h.get('ambient-world').dataset.scene, id);
+    assert.equal(h.saved().scene, id);
+    assert.deepEqual(h.layers.filter(layer => layer.classList.contains('active')).map(layer => layer.dataset.sceneLayer), [id]);
+    assert.deepEqual(h.sceneButtons.filter(button => button.getAttribute('aria-pressed') === 'true').map(button => button.dataset.scene), [id]);
+    assert.equal(h.get('scene-menu').open, false);
+    assert.equal(h.saved().sound, 'fire');
+    assert.equal(h.saved().enabled, false);
+    assert.equal(h.saved().volume, 37);
+    const restored = ambienceHarness(h.saved());
+    assert.equal(restored.get('ambient-world').dataset.scene, id);
+    assert.notEqual(restored.get('scene-current').textContent, 'Off');
+    assert.equal(restored.audio.length, 0, 'a saved paused sound is not started by a background change');
+  }
 });

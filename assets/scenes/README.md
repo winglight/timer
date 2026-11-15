@@ -28,3 +28,7 @@ source-photo coordinates and use the same centered cover mapping as the DOM.
 
 The forest's generated animal animation is documented separately in
 [`squirrel-atlas.md`](squirrel-atlas.md); it is not an Unsplash photograph.
+
+The cabin fireplace and orbital Earth assets are documented in
+[`new-scenes.md`](new-scenes.md), including generated-image provenance, static
+fallbacks, and NASA Earth texture credits.

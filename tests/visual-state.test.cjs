@@ -103,12 +103,22 @@ test('active breathing hides setup controls but keeps the remaining timer and re
   assert.doesNotMatch(hideBlock[0], /#remaining|#reset/, 'remaining timer and reset remain available');
 });
 
-test('scene picker exposes ten named scenes including the off option', () => {
+test('scene picker exposes twelve named scenes including the off option', () => {
   const names = [...html.matchAll(/data-scene="([^"]+)"/g)].map(match => match[1]);
-  assert.equal(new Set(names).size, 10);
-  for (const name of ['forest', 'waterfall', 'starlight', 'blossom', 'desert']) {
+  assert.equal(new Set(names).size, 12);
+  for (const name of ['forest', 'waterfall', 'starlight', 'blossom', 'desert', 'hearth', 'orbital']) {
     assert.ok(names.includes(name), name + ' scene is present');
     assert.ok(ambient.includes(name+':['), name + ' has bilingual labels');
+  }
+});
+
+test('the new scenes have local still images for reduced motion and unavailable WebGL', () => {
+  for (const name of ['hearth', 'orbital']) {
+    const layer = html.match(new RegExp('<div[^>]*data-scene-layer="' + name + '"[^>]*>([\\s\\S]*?)</div>'));
+    assert.ok(layer, name + ' has a DOM fallback layer');
+    const source = layer[1].match(/<img[^>]*src="(assets\/scenes\/[^"?]+)(?:\?[^\"]*)?"/);
+    assert.ok(source, name + ' retains a local still even when the canvas is hidden');
+    assert.ok(fs.existsSync(path.join(__dirname, '..', source[1])), source[1] + ' is bundled');
   }
 });
 
