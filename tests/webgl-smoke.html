@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="/">
+<link rel="icon" href="data:,">
+<title>Ambient WebGL regression harness</title>
+<style>
+html,body { margin:0; width:100%; height:100%; }
+#qa-world { position:fixed; inset:0; }
+#qa-world .scene-layer { display:none; }
+#qa-canvas { width:100%; height:100%; display:block; }
+</style>
+</head>
+<body>
+<div id="qa-world" data-scene="none"><canvas id="qa-canvas"></canvas></div>
+<script type="module">
+const world = document.getElementById('qa-world');
+const canvas = document.getElementById('qa-canvas');
+const response = await fetch('/index.html', { cache: 'no-store' });
+if (!response.ok) throw new Error('Cannot load the production entrypoint');
+const entry = new DOMParser().parseFromString(await response.text(), 'text/html');
+for (const source of entry.querySelectorAll('[data-scene-layer]')) {
+  const layer = source.cloneNode(true);
+  for (const image of layer.querySelectorAll('img')) {
+    image.src = new URL(image.getAttribute('src'), location.origin + '/').href;
+    if (image.dataset.sceneTexture) {
+      image.dataset.sceneTexture = new URL(image.dataset.sceneTexture, location.origin + '/').href;
+    }
+  }
+  world.appendChild(layer);
+}
+const script = entry.querySelector('script[src^="scene-runtime.js"]');
+if (!script) throw new Error('Production runtime entry not found');
+const runtimeUrl = new URL(script.getAttribute('src'), location.origin + '/');
+const { SceneRuntime, GPU_SCENES } = await import(runtimeUrl.href);
+const runtime = new SceneRuntime(world, canvas);
+window.ambientSceneIds = [...GPU_SCENES];
+window.ambientRuntimeUrl = runtimeUrl.href;
+
+// Invalid controls prove that this harness actually compiles Three.js shaders
+// and catches both classes of regression instead of accepting a still image.
+window.runInvalidShaderControls = async () => {
+  const THREE = await import('/vendor/three.module.js');
+  const renderer = new THREE.WebGLRenderer({ antialias:false });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setSize(8, 8);
+  const camera = new THREE.Camera();
+  const results = [];
+  const cases = [
+    ['luminance', 'float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }\nvoid main() { gl_FragColor = vec4(vec3(luminance(vec3(1.0))), 1.0); }'],
+    ['active', 'void main() { float active = 0.5; gl_FragColor = vec4(vec3(active), 1.0); }']
+  ];
+  try {
+    for (const [name, fragmentShader] of cases) {
+      let log = '';
+      renderer.debug.onShaderError = (gl, program, vertex, fragment) => {
+        log = gl.getShaderInfoLog(fragment) || gl.getProgramInfoLog(program) || '';
+        throw new Error('Expected invalid shader: ' + name);
+      };
+      const geometry = new THREE.PlaneGeometry(2, 2);
+      const material = new THREE.ShaderMaterial({
+        vertexShader:'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader, depthTest:false, depthWrite:false
+      });
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(geometry, material));
+      try { renderer.render(scene, camera); } catch (error) {
+        if (!String(error).includes('Expected invalid shader:')) throw error;
+      } finally { geometry.dispose(); material.dispose(); scene.clear(); }
+      if (!log.includes(name)) throw new Error('Invalid control was not rejected: ' + name);
+      results.push({ name, rejected:true, log });
+    }
+    return results;
+  } finally { renderer.dispose(); renderer.forceContextLoss(); }
+};
+
+window.runAmbientCase = async id => {
+  await runtime.setScene(id);
+  await runtime.ready;
+  runtime.stop();
+  if (!runtime.active || runtime.failedScene || !canvas.classList.contains('is-ready')) {
+    return { id, ok:false, failedScene:runtime.failedScene, reason:'Runtime fell back to the still photograph' };
+  }
+  const gl = canvas.getContext('webgl2');
+  if (!gl) throw new Error('The production renderer did not create a WebGL2 context');
+  const width = gl.drawingBufferWidth, height = gl.drawingBufferHeight;
+  const frames = [];
+  const savedNow = Date.now;
+  const epoch = savedNow();
+  try {
+    for (const time of [0, 3.25, 9.5]) {
+      // Orbital time is wall-clock-based; advance it deterministically without
+      // speeding up production animation or waiting through an entire orbit.
+      Date.now = () => epoch + time * 1000;
+      runtime.elapsed = time;
+      runtime.render(0);
+      if (!runtime.active || runtime.failedScene) throw new Error('Render failed for ' + id);
+      const pixels = new Uint8Array(width * height * 4);
+      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      const error = gl.getError();
+      if (error !== gl.NO_ERROR) throw new Error(id + ': GL error ' + error);
+      frames.push(pixels);
+    }
+    // Capture before returning to the event loop: production deliberately uses
+    // preserveDrawingBuffer:false, so a later screenshot may be a cleared buffer.
+    window.ambientLastFramePng = canvas.toDataURL('image/png');
+  } finally { Date.now = savedNow; }
+  let visiblePixels = 0, changedPixels = 0;
+  for (let i = 0; i < frames[0].length; i += 4) {
+    if (frames.some(frame => frame[i+3] && (frame[i] || frame[i+1] || frame[i+2]))) visiblePixels++;
+    if (frames.slice(1).some(frame => frame[i] !== frames[0][i] || frame[i+1] !== frames[0][i+1] || frame[i+2] !== frames[0][i+2] || frame[i+3] !== frames[0][i+3])) changedPixels++;
+  }
+  return { id, ok:visiblePixels > 0 && changedPixels > 0, visiblePixels, changedPixels, width, height,
+    glVersion:gl.getParameter(gl.VERSION), shaderVersion:gl.getParameter(gl.SHADING_LANGUAGE_VERSION) };
+};
+window.ambientReady = true;
+</script>
+</body>
+</html>

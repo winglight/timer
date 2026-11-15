@@ -1,3 +1,4 @@
 .wrangler/
 .playwright-mcp/
 .assetsignore
+.webgl-results/
