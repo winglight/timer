@@ -53,6 +53,7 @@ jobs:
           git diff -- scenes/landscape.js scene-runtime.js index.html
       - name: Run complete unit suite
         run: |
+          set -o pipefail
           mkdir -p .webgl-results
           node --test tests/*.test.cjs | tee .webgl-results/unit-tests.txt
       - name: Real browser compilation and rendering after repair
@@ -70,4 +71,5 @@ jobs:
         with:
           name: ambient-glsl-repair-results
           path: .webgl-results/
+          include-hidden-files: true
           retention-days: 7

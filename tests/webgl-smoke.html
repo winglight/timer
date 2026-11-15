@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="/">
 <link rel="icon" href="data:,">
 <title>Ambient WebGL regression harness</title>
 <style>
@@ -24,6 +25,9 @@ for (const source of entry.querySelectorAll('[data-scene-layer]')) {
   const layer = source.cloneNode(true);
   for (const image of layer.querySelectorAll('img')) {
     image.src = new URL(image.getAttribute('src'), location.origin + '/').href;
+    if (image.dataset.sceneTexture) {
+      image.dataset.sceneTexture = new URL(image.dataset.sceneTexture, location.origin + '/').href;
+    }
   }
   world.appendChild(layer);
 }
@@ -99,6 +103,9 @@ window.runAmbientCase = async id => {
       if (error !== gl.NO_ERROR) throw new Error(id + ': GL error ' + error);
       frames.push(pixels);
     }
+    // Capture before returning to the event loop: production deliberately uses
+    // preserveDrawingBuffer:false, so a later screenshot may be a cleared buffer.
+    window.ambientLastFramePng = canvas.toDataURL('image/png');
   } finally { Date.now = savedNow; }
   let visiblePixels = 0, changedPixels = 0;
   for (let i = 0; i < frames[0].length; i += 4) {

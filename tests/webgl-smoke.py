@@ -7,6 +7,7 @@ not a Safari/iOS device certification or a photorealism/visual-quality review.
 """
 from __future__ import annotations
 import argparse
+import base64
 import functools
 import http.server
 import json
@@ -49,6 +50,7 @@ def main() -> None:
                     messages, exceptions = [], []
                     page.on('console', lambda message: messages.append({'type': message.type, 'text': message.text}))
                     page.on('pageerror', lambda error: exceptions.append(str(error)))
+                    page.on('response', lambda response: messages.append({'type':'error', 'text':f'HTTP {response.status}: {response.url}'}) if response.status >= 400 else None)
                     try:
                         page.goto(f'http://127.0.0.1:{server.server_port}/tests/webgl-smoke.html', wait_until='load')
                         page.wait_for_function('window.ambientReady === true', timeout=60000)
@@ -74,7 +76,8 @@ def main() -> None:
                                     raise AssertionError('Missing, failed or static WebGL output: ' + scene_id)
                                 if any(item['type'] in ('error', 'warning') for item in result['console']):
                                     raise AssertionError('Console failure while rendering ' + scene_id + ': ' + console_text)
-                                page.locator('#qa-canvas').screenshot(path=str(output / f'{scene_id}-{width}x{height}.png'))
+                                data_url = page.evaluate('window.ambientLastFramePng')
+                                (output / f'{scene_id}-{width}x{height}.png').write_bytes(base64.b64decode(data_url.split(',', 1)[1]))
                         if exceptions:
                             raise AssertionError('Uncaught browser errors: ' + '\n'.join(exceptions))
                     finally:

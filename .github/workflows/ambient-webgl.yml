@@ -31,4 +31,5 @@ jobs:
         with:
           name: ambient-webgl-results
           path: .webgl-results/
+          include-hidden-files: true
           retention-days: 7
