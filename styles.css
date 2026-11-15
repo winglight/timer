@@ -340,6 +340,10 @@ body:is([data-scene="hearth"], [data-scene="orbital"]) .orb-core {
   background: radial-gradient(circle at 27% 23%, rgba(225, 244, 236, .18), rgba(155, 210, 213, .07) 76%);
   border-color: rgba(225, 246, 242, .38);
 }
+body:is([data-scene="hearth"], [data-scene="orbital"]) :is(#phase-label, #phase-seconds) {
+  color: #f3faf7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .95), 0 0 16px rgba(0, 0, 0, .8);
+}
 
 /* An active or paused practice is intentionally distraction-free. Hiding the
    entire aside also removes its costly full-panel backdrop blur from the scene. */
