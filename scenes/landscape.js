@@ -208,7 +208,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     float distantValley = smoothstep(0.565, 0.625, p.y) *
       (1.0 - smoothstep(0.775, 0.835, p.y));
     float dustAlpha = clamp(dust * edge * distantValley *
-      (0.16 + openGround * 0.84) * 0.30, 0.0, 0.22);
+      (0.16 + openGround * 0.84) * 0.50, 0.0, 0.22);
     color = mix(color, vec3(0.67, 0.43, 0.24), dustAlpha);
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
