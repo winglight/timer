@@ -1,0 +1,73 @@
+name: Validate landscape GLSL repair
+on:
+  push:
+    branches: [fix/ambient-glsl-check-20261115]
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install -r tests/requirements-webgl.txt
+          python -m playwright install --with-deps chromium
+      - name: Reproduce both original compiler failures
+        run: python tests/webgl-smoke.py --scenes starlight desert --expect-compile-failure --out .webgl-results/before
+      - name: Apply narrow source fixes and refresh entrypoint versions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('scenes/landscape.js')
+          s = p.read_text()
+          assert s.count('float luminance(vec3 c)') == 1
+          assert s.count('float active =') == 1
+          s = re.sub(r'\bluminance\b', 'landscapeLuminance', s)
+          s = re.sub(r'\bactive\b', 'gustEnvelope', s)
+          p.write_text(s)
+          p = Path('scene-runtime.js')
+          s = p.read_text()
+          old = 'landscape.js?v=20261115-5'
+          assert s.count(old) == 1
+          s = s.replace(old, 'landscape.js?v=20261115-glsl-fix-1')
+          s = s.replace(r".join('\\n')", r".join('\n')")
+          p.write_text(s)
+          p = Path('index.html')
+          s = p.read_text()
+          old = 'scene-runtime.js?v=20261115-hearth-orbit-1'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, 'scene-runtime.js?v=20261115-glsl-fix-1'))
+          PY
+          git diff --check
+          git diff -- scenes/landscape.js scene-runtime.js index.html
+      - name: Run complete unit suite
+        run: |
+          mkdir -p .webgl-results
+          node --test tests/*.test.cjs | tee .webgl-results/unit-tests.txt
+      - name: Real browser compilation and rendering after repair
+        run: python tests/webgl-smoke.py --out .webgl-results/after
+      - name: Publish tested candidate branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scenes/landscape.js scene-runtime.js index.html
+          git commit -m 'fix: namespace landscape GLSL helpers and reserved gust identifier'
+          git push origin HEAD:refs/heads/fix/ambient-glsl-verified-20261115
+          git rev-parse HEAD | tee .webgl-results/verified-commit.txt
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: ambient-glsl-repair-results
+          path: .webgl-results/
+          retention-days: 7
