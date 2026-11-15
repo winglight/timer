@@ -6,7 +6,7 @@ const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const source = name => pathToFileURL(path.join(__dirname, '..', name)).href;
 
-test('firelight is continuous, bounded and reproducible through pauses', async () => {
+test('photographic firelight stays subtle, continuous and reproducible through pauses', async () => {
   const { firelightAt } = await import(source('scenes/hearth.js'));
   const intensities = [], lateralPositions = [];
   for (let i = 0; i <= 600; i++) {
@@ -14,14 +14,14 @@ test('firelight is continuous, bounded and reproducible through pauses', async (
     const value = firelightAt(time);
     const nearby = firelightAt(time + 0.001);
     assert.ok(value.every(Number.isFinite));
-    assert.ok(value[0] >= 0.42 && value[0] <= 1.56);
-    assert.ok(Math.abs(value[1]) <= 0.007 && Math.abs(value[2]) <= 0.0085);
-    assert.ok(value.every((v, component) => Math.abs(v - nearby[component]) < 0.009));
+    assert.ok(value[0] >= 0.95 && value[0] <= 1.08);
+    assert.ok(Math.abs(value[1]) <= 0.0024 && Math.abs(value[2]) <= 0.0016);
+    assert.ok(value.every((v, component) => Math.abs(v - nearby[component]) < 0.002));
     assert.deepEqual(value, firelightAt(time));
     intensities.push(value[0]); lateralPositions.push(value[1]);
   }
-  assert.ok(Math.max(...intensities) - Math.min(...intensities) > 0.25);
-  assert.ok(Math.max(...lateralPositions) - Math.min(...lateralPositions) > 0.008);
+  assert.ok(Math.max(...intensities) - Math.min(...intensities) > 0.055);
+  assert.ok(Math.max(...lateralPositions) - Math.min(...lateralPositions) > 0.0025);
   assert.deepEqual(firelightAt(NaN), firelightAt(0));
 });
 

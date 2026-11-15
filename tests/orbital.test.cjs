@@ -44,28 +44,44 @@ test('random cyclone generations stay in warm ocean basins and turn according to
   assert.deepEqual(cycloneStatesAt(ORBITAL_EPOCH_MS + 400_000), cycloneStatesAt(ORBITAL_EPOCH_MS + 400_000));
 });
 
-test('full circular Earth fits inside the window through portrait, landscape and ultra-wide resizes', async () => {
-  const { orbitalLayout } = await import(moduleURL('scenes/orbital-model.js'));
-  for (const [width, height] of [[320, 720], [390, 844], [844, 390], [1440, 900], [2560, 1080]]) {
-    const { center, radius, aspect } = orbitalLayout(width, height);
-    assert.ok(center[0] - radius / aspect > .065);
-    assert.ok(center[0] + radius / aspect < .935);
-    assert.ok(center[1] - radius > .175);
-    assert.ok(center[1] + radius < .905);
+test('complete Earth and atmosphere fit the visible photographic aperture after every cover crop', async () => {
+  const { orbitalLayout, orbitalWindowPlanes, ORBITAL_INTERIORS, interiorForAspect } = await import(moduleURL('scenes/orbital-model.js'));
+  for (const [width, height] of [[320, 720], [390, 844], [844, 390], [1024, 1024], [1200, 900], [1440, 900], [2560, 1080]]) {
+    const profile = ORBITAL_INTERIORS[interiorForAspect(width, height)];
+    const { center, radius, aspect, cover } = orbitalLayout(width, height);
+    const sourceAspect = profile.size[0] / profile.size[1];
+    const planes = orbitalWindowPlanes(profile, ...profile.size);
     assert.ok(Math.abs((radius / aspect) * width - radius * height) < 1e-10);
+    // Probe the atmosphere's outer edge against original-photo coordinates.
+    for (let step = 0; step < 360; step += 3) {
+      const angle = step * Math.PI / 180;
+      const screenX = center[0] + Math.cos(angle) * radius * 1.065 / aspect;
+      const screenY = center[1] + Math.sin(angle) * radius * 1.065;
+      assert.ok(screenX > 0 && screenX < 1 && screenY > 0 && screenY < 1);
+      const sourceX = (screenX * cover[0] + cover[2]) * sourceAspect;
+      const sourceY = (1 - screenY) * cover[1] + cover[3];
+      assert.ok(planes.every(([nx, ny, d]) => nx * sourceX + ny * sourceY + d > 0), `${width}x${height} atmosphere stays within window`);
+      if (profile.globeBottom !== undefined) {
+        assert.ok(sourceY < profile.globeBottom, 'whole Earth and halo remain above the photographed handrail');
+      }
+    }
   }
 });
 
 test('scene resumes at wall-clock Earth orientation without resetting to animation elapsed', async () => {
   const THREE = await import(moduleURL('vendor/three.module.js'));
   const { createOrbitalScene } = await import(moduleURL('scenes/orbital.js'));
-  const { ORBITAL_EPOCH_MS, earthRotationAt } = await import(moduleURL('scenes/orbital-model.js'));
+  const { ORBITAL_EPOCH_MS, earthRotationAt, ORBITAL_INTERIORS, orbitalPhotoCover } = await import(moduleURL('scenes/orbital-model.js'));
   const earthTexture = new THREE.Texture({ width: 4096, height: 2048 });
   const cloudTexture = new THREE.Texture({ width: 2048, height: 1024 });
   const nightTexture = new THREE.Texture({ width: 2048, height: 1024 });
+  const interiorTexture = new THREE.Texture({ width: ORBITAL_INTERIORS.landscape.size[0], height: ORBITAL_INTERIORS.landscape.size[1] });
+  const interiorPortraitTexture = new THREE.Texture({ width: ORBITAL_INTERIORS.portrait.size[0], height: ORBITAL_INTERIORS.portrait.size[1] });
+  const borrowed = [earthTexture, cloudTexture, nightTexture, interiorTexture, interiorPortraitTexture];
   let clock = ORBITAL_EPOCH_MS + 60_000;
-  const handle = await createOrbitalScene({ width: 1440, height: 900, earthTexture, cloudTexture, nightTexture, now: () => clock });
+  const handle = await createOrbitalScene({ width: 1440, height: 900, earthTexture, cloudTexture, nightTexture, interiorTexture, interiorPortraitTexture, now: () => clock });
   const uniforms = handle.scene.children[0].material.uniforms;
+  assert.equal(uniforms.uInterior.value, interiorTexture);
   handle.update(60);
   const initial = uniforms.uRotation.value;
   handle.update(10000);
@@ -79,15 +95,22 @@ test('scene resumes at wall-clock Earth orientation without resetting to animati
   assert.deepEqual(handle.camera.position.toArray(), camera);
   assert.equal(uniforms.uResolution.value.x, 390);
   assert.equal(uniforms.uResolution.value.y, 844);
+  assert.equal(uniforms.uInterior.value, interiorPortraitTexture);
+  assert.deepEqual(uniforms.uCover.value.toArray(), orbitalPhotoCover(390, 844, ...ORBITAL_INTERIORS.portrait.size));
+  handle.resize(1024, 1024);
+  assert.equal(uniforms.uInterior.value, interiorPortraitTexture, 'matches the CSS max-aspect-ratio: 1/1 source');
+  handle.resize(2560, 1080);
+  assert.equal(uniforms.uInterior.value, interiorTexture);
+  assert.deepEqual(uniforms.uCover.value.toArray(), orbitalPhotoCover(2560, 1080, ...ORBITAL_INTERIORS.landscape.size));
   let ownedDisposals = 0, borrowedDisposals = 0;
   handle.scene.children[0].geometry.addEventListener('dispose', () => ownedDisposals++);
   handle.scene.children[0].material.addEventListener('dispose', () => ownedDisposals++);
-  for (const texture of [earthTexture, cloudTexture, nightTexture]) texture.addEventListener('dispose', () => borrowedDisposals++);
+  for (const texture of borrowed) texture.addEventListener('dispose', () => borrowedDisposals++);
   handle.dispose(); handle.dispose(); handle.update(10); handle.resize(1, 1);
   assert.equal(ownedDisposals, 2);
   assert.equal(borrowedDisposals, 0);
   assert.equal(handle.scene.children.length, 0);
-  for (const texture of [earthTexture, cloudTexture, nightTexture]) texture.dispose();
+  for (const texture of borrowed) texture.dispose();
 });
 
 test('failed asset loading releases other textures even when they finish later', async () => {
@@ -104,9 +127,11 @@ test('failed asset loading releases other textures even when they finish later',
   };
   try {
     await assert.rejects(createOrbitalScene({ width: 390, height: 844 }), /Cloud image unavailable/);
-    assert.equal(disposed.length, 2);
+    assert.equal(disposed.length, 4);
     assert.ok(disposed.some(url => url.endsWith('earth-day.jpg')));
     assert.ok(disposed.some(url => url.endsWith('earth-night.jpg')));
+    assert.ok(disposed.some(url => url.endsWith('orbital-interior.jpg')));
+    assert.ok(disposed.some(url => url.endsWith('orbital-interior-portrait.jpg')));
   } finally {
     THREE.TextureLoader.prototype.loadAsync = load;
   }

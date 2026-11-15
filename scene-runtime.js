@@ -13,8 +13,7 @@ const SCENE_QUALITY = {
   waterfall: { density: 2, pixels: 4000000 },
   starlight: { density: 2, pixels: 4000000 },
   desert: { density: 2, pixels: 4000000 },
-  // The fire integrates a small volume; bound its work independently of the
-  // less expensive photographic overlays and ray-sphere Earth.
+  // Keep the photographic flame pass bounded on high-density mobile screens.
   hearth: { density: 1.5, pixels: 2000000 },
   orbital: { density: 2, pixels: 4000000 },
   cabin: { density: 1.25, pixels: 1200000 }
@@ -58,11 +57,11 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
 
 async function createScene(options) {
   if (options.id === 'hearth') {
-    const { createHearthScene } = await import('./scenes/hearth.js?v=20261115-hearth-orbit-1');
+    const { createHearthScene } = await import('./scenes/hearth.js?v=20261115-photo-scenes-1');
     return createHearthScene(options);
   }
   if (options.id === 'orbital') {
-    const { createOrbitalScene } = await import('./scenes/orbital.js?v=20261115-hearth-orbit-1');
+    const { createOrbitalScene } = await import('./scenes/orbital.js?v=20261115-photo-scenes-1');
     return createOrbitalScene(options);
   }
   if (options.id === 'ocean') {

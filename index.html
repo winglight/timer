@@ -7,7 +7,7 @@
 <meta name="description" content="跟随呼吸的节奏，回到当下。">
 <title>呼吸 · 回到当下</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23eef6f1'/%3E%3Cpath d='M9 37C19 37 17 17 26 17S34 47 43 47C50 47 49 36 56 36' fill='none' stroke='%235c9e91' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=20261115-hearth-orbit-2">
+<link rel="stylesheet" href="styles.css?v=20261115-photo-scenes-1">
 <link rel="stylesheet" href="r2-config.css">
 </head>
 <body data-status="idle">
@@ -21,8 +21,8 @@
  <div class="scene-layer" data-scene-layer="starlight"><img src="assets/scenes/starlight.jpg" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="blossom"><img src="assets/scenes/blossom.jpg" alt="" decoding="async" loading="lazy"></div>
  <div class="scene-layer" data-scene-layer="desert"><img src="assets/scenes/desert.jpg" alt="" decoding="async" loading="lazy"></div>
- <div class="scene-layer" data-scene-layer="hearth"><img src="assets/scenes/hearth-still.jpg" data-scene-texture="assets/scenes/hearth.jpg" alt="" decoding="async" loading="lazy"></div>
- <div class="scene-layer" data-scene-layer="orbital"><picture><source media="(max-aspect-ratio: 1/1)" srcset="assets/scenes/orbital-portrait.jpg"><img src="assets/scenes/orbital.jpg" alt="" decoding="async" loading="lazy"></picture></div>
+ <div class="scene-layer" data-scene-layer="hearth"><img src="assets/scenes/hearth-still.jpg?v=20261115-photo-scenes-1" data-scene-texture="assets/scenes/hearth-natural.jpg" alt="" decoding="async" loading="lazy"></div>
+ <div class="scene-layer" data-scene-layer="orbital"><picture><source media="(max-aspect-ratio: 1/1)" srcset="assets/scenes/orbital-portrait.jpg?v=20261115-photo-scenes-1"><img src="assets/scenes/orbital.jpg?v=20261115-photo-scenes-1" alt="" decoding="async" loading="lazy"></picture></div>
  <canvas class="scene-webgl" id="scene-webgl" aria-hidden="true"></canvas>
  <div class="scene-shade"></div>
 </div>
@@ -78,8 +78,8 @@
        <button type="button" class="scene-choice" data-scene="starlight"><img class="scene-thumb" src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="星空夜色" data-en="Starry night">星空夜色</span></button>
        <button type="button" class="scene-choice" data-scene="blossom"><img class="scene-thumb" src="https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="樱花微风" data-en="Cherry blossoms">樱花微风</span></button>
        <button type="button" class="scene-choice" data-scene="desert"><img class="scene-thumb" src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=520&q=78" alt=""><span data-zh="沙漠暮色" data-en="Desert dusk">沙漠暮色</span></button>
-       <button type="button" class="scene-choice" data-scene="hearth"><img class="scene-thumb" src="assets/scenes/hearth-thumb.jpg" alt="" loading="lazy"><span data-zh="木屋中的火炉" data-en="Cabin fireplace">木屋中的火炉</span></button>
-       <button type="button" class="scene-choice" data-scene="orbital"><img class="scene-thumb" src="assets/scenes/orbital-thumb.jpg" alt="" loading="lazy"><span data-zh="空间站 · 地球" data-en="Orbital Earth">空间站 · 地球</span></button>
+       <button type="button" class="scene-choice" data-scene="hearth"><img class="scene-thumb" src="assets/scenes/hearth-thumb.jpg?v=20261115-photo-scenes-1" alt="" loading="lazy"><span data-zh="木屋中的火炉" data-en="Cabin fireplace">木屋中的火炉</span></button>
+       <button type="button" class="scene-choice" data-scene="orbital"><img class="scene-thumb" src="assets/scenes/orbital-thumb.jpg?v=20261115-photo-scenes-1" alt="" loading="lazy"><span data-zh="空间站 · 地球" data-en="Orbital Earth">空间站 · 地球</span></button>
       </div>
      </div>
     </details>
@@ -164,7 +164,7 @@
 <script src="engine.js"></script>
 <script src="corona.js"></script>
 <script src="ambient.js?v=20261115-hearth-orbit-1"></script>
-<script type="module" src="scene-runtime.js?v=20261115-glsl-fix-1"></script>
+<script type="module" src="scene-runtime.js?v=20261115-photo-scenes-1"></script>
 <script src="share.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">

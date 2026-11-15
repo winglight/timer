@@ -71,8 +71,94 @@ export function cycloneStatesAt(timestampMs) {
   });
 }
 
-/** Screen-space layout keeps the full globe inside the unobstructed window. */
-export function orbitalLayout(width, height) {
-  const aspect = Math.max(1, width) / Math.max(1, height);
-  return { aspect, center: [.5, .555], radius: Math.min(.315, aspect * .355) };
+// Aperture vertices use the original photograph's top-left coordinate system.
+// They are calibrated to the inner glass, never to the white structural frame.
+// Separate portrait framing preserves visible cabin equipment on narrow screens.
+export const ORBITAL_INTERIORS = Object.freeze({
+  landscape: {
+    filename: 'orbital-interior.jpg',
+    size: [1672, 941],
+    aperture: [[299/1672, 194/941], [1375/1672, 194/941], [1408/1672, 233/941], [1406/1672, 644/941], [1358/1672, 695/941], [307/1672, 695/941], [261/1672, 644/941], [261/1672, 233/941]],
+    // A real handrail crosses the lower glass. Stars can show through its gaps,
+    // but fit the full Earth and atmosphere above the top edge of the rail.
+    globeBottom: 665/941
+  },
+  portrait: {
+    filename: 'orbital-interior-portrait.jpg',
+    size: [1086, 1448],
+    aperture: [[375/1086, 307/1448], [710/1086, 307/1448], [742/1086, 345/1448], [742/1086, 1059/1448], [710/1086, 1099/1448], [376/1086, 1099/1448], [342/1086, 1059/1448], [342/1086, 345/1448]]
+  }
+});
+
+export const interiorForAspect = (width, height) => width / height <= 1 ? 'portrait' : 'landscape';
+
+/** Centered cover transform for the undistorted photographic interior plate. */
+export function orbitalPhotoCover(width, height, sourceWidth, sourceHeight) {
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const x = width / (sourceWidth * scale), y = height / (sourceHeight * scale);
+  return [x, y, (1 - x) / 2, (1 - y) / 2];
+}
+
+function polygonPlanes(polygon) {
+  return polygon.map((point, index) => {
+    const next = polygon[(index + 1) % polygon.length];
+    const dx = next[0] - point[0], dy = next[1] - point[1];
+    const length = Math.hypot(dx, dy);
+    const nx = -dy / length, ny = dx / length;
+    return [nx, ny, -(nx * point[0] + ny * point[1])];
+  });
+}
+
+/** Source-image half planes keep the window matte attached to the exact pixels. */
+export function orbitalWindowPlanes(profile, sourceWidth, sourceHeight) {
+  const sourceAspect = sourceWidth / sourceHeight;
+  return polygonPlanes(profile.aperture.map(([x, y]) => [x * sourceAspect, y]));
+}
+
+/**
+ * Fit a complete circular Earth inside both the visible aperture and viewport.
+ * Grid refinement maximizes clearance to the convex aperture's half-planes;
+ * even extreme phone/ultrawide crops retain the entire globe and its atmosphere.
+ */
+export function orbitalLayout(width, height, profile, sourceSize) {
+  width = Math.max(1, width); height = Math.max(1, height);
+  const aspect = width / height;
+  profile ||= ORBITAL_INTERIORS[interiorForAspect(width, height)];
+  const [sourceWidth, sourceHeight] = sourceSize || profile.size;
+  const cover = orbitalPhotoCover(width, height, sourceWidth, sourceHeight);
+  const polygon = profile.aperture.map(([x, y]) => [
+    (x - cover[2]) / cover[0] * aspect,
+    (y - cover[3]) / cover[1]
+  ]);
+  const planes = polygonPlanes(polygon).concat([
+    [1, 0, -.025 * aspect], [-1, 0, .975 * aspect],
+    [0, 1, -.035], [0, -1, .965]
+  ]);
+  if (profile.globeBottom !== undefined) {
+    planes.push([0, -1, (profile.globeBottom - cover[3]) / cover[1]]);
+  }
+  const clearance = (x, y) => Math.min(...planes.map(([nx, ny, d]) => nx * x + ny * y + d));
+  let bestX = aspect * .5, bestY = .5, bestRadius = -Infinity;
+  let left = 0, right = aspect, top = 0, bottom = 1;
+  for (let level = 0; level < 5; level++) {
+    const dx = (right - left) / 12, dy = (bottom - top) / 12;
+    for (let row = 0; row <= 12; row++) {
+      for (let col = 0; col <= 12; col++) {
+        const x = left + col * dx, y = top + row * dy;
+        const r = clearance(x, y);
+        // Prefer central framing when a rectangular opening has many equally
+        // good circle centers. This also avoids one-pixel resize jitter.
+        const score = r - Math.hypot(x - aspect * .5, y - .47) * .0001;
+        const previous = bestRadius - Math.hypot(bestX - aspect * .5, bestY - .47) * .0001;
+        if (score > previous) { bestX = x; bestY = y; bestRadius = r; }
+      }
+    }
+    left = Math.max(0, bestX - dx); right = Math.min(aspect, bestX + dx);
+    top = Math.max(0, bestY - dy); bottom = Math.min(1, bestY + dy);
+  }
+  return {
+    aspect, center: [bestX / aspect, 1 - bestY],
+    radius: Math.max(.01, bestRadius * .86), cover,
+    profile: interiorForAspect(width, height)
+  };
 }

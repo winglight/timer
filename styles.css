@@ -245,7 +245,7 @@ body.modal-open { overflow: hidden; }
 .scene-layer[data-scene-layer="mountain"]{background:linear-gradient(180deg,#9eb9ca,#d9e4e0 48%,#536b6c)}
 .scene-layer[data-scene-layer="cabin"]{background:linear-gradient(180deg,#718b8b,#526b5b 55%,#172f2b)}
 .scene-layer[data-scene-layer="hearth"]{background:#21130d}
-.scene-layer[data-scene-layer="orbital"]{background:#020710}
+.scene-layer[data-scene-layer="orbital"]{background:#e5e9ec}
 /* Keep a complete globe even in unusually tall or wide static fallbacks. */
 .scene-layer[data-scene-layer="orbital"] img{object-fit:contain}
 .scene-shade{position:absolute;inset:0;pointer-events:none}
@@ -254,7 +254,7 @@ body.modal-open { overflow: hidden; }
 .scene-shade{z-index:2;background:linear-gradient(90deg,rgba(6,19,23,.38),rgba(6,19,23,.10) 52%,rgba(6,19,23,.32)),linear-gradient(180deg,rgba(6,19,23,.27),transparent 25%,transparent 73%,rgba(6,19,23,.28))}
 .ambient-world[data-scene="mountain"] .scene-shade{background:linear-gradient(90deg,rgba(6,19,23,.22),rgba(6,19,23,.04) 52%,rgba(6,19,23,.17)),linear-gradient(180deg,rgba(6,19,23,.24),transparent 25%,transparent 73%,rgba(6,19,23,.08))}
 .ambient-world[data-scene="hearth"] .scene-shade{background:linear-gradient(180deg,rgba(15,8,4,.22),transparent 28%,transparent 78%,rgba(15,8,4,.13))}
-.ambient-world[data-scene="orbital"] .scene-shade{background:linear-gradient(180deg,rgba(1,5,12,.16),transparent 24%,transparent 80%,rgba(1,5,12,.12))}
+.ambient-world[data-scene="orbital"] .scene-shade{background:none}
 /* Only the bounded canvas changes during environmental motion. Keeping the
    full-size photo stationary avoids re-compositing the toolbar and calendar. */
 
@@ -344,6 +344,13 @@ body:is([data-scene="hearth"], [data-scene="orbital"]) :is(#phase-label, #phase-
   color: #f3faf7;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .95), 0 0 16px rgba(0, 0, 0, .8);
 }
+/* The observatory now has a bright white ceiling and deck. Keep supporting
+   text legible on those surfaces without dimming the photographic interior. */
+body[data-scene="orbital"] :is(.tagline, .breathing-quote, .practice-footer) {
+  color: #243b4b;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, .95), 0 0 8px rgba(255, 255, 255, .8);
+}
+body[data-scene="orbital"] .practice-footer:before { background: #617888; }
 
 /* An active or paused practice is intentionally distraction-free. Hiding the
    entire aside also removes its costly full-panel backdrop blur from the scene. */

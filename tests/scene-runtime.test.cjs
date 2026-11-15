@@ -144,17 +144,17 @@ test('off, unknown, hidden and reduced-motion starts do not allocate a GPU rende
   }
 });
 
-test('a scene may animate an unlit source while retaining a different rendered fallback image', async () => {
+test('a scene may animate its source plate while retaining a different rendered fallback image', async () => {
   const h = await harness({
     scene: 'hearth',
     image: {
       currentSrc: 'https://timer.example/assets/scenes/hearth-still.jpg',
       src: 'https://timer.example/assets/scenes/hearth-still.jpg',
-      dataset: { sceneTexture: 'assets/scenes/hearth.jpg' }
+      dataset: { sceneTexture: 'assets/scenes/hearth-natural.jpg' }
     }
   });
   await h.ready();
-  assert.equal(h.requested[0].photoUrl, 'assets/scenes/hearth.jpg', 'the fire is not baked into both the still and animated image');
+  assert.equal(h.requested[0].photoUrl, 'assets/scenes/hearth-natural.jpg', 'the animation samples its original plate rather than a previously rendered frame');
   assert.equal(h.frames.size, 1);
   h.runtime.destroy();
 });
