@@ -43,7 +43,7 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
       fragmentLog && 'Fragment shader: ' + fragmentLog,
       vertexLog && 'Vertex shader: ' + vertexLog,
       programLog && 'Program: ' + programLog
-    ].filter(Boolean).join('\\n');
+    ].filter(Boolean).join('\n');
     throw new Error('Ambient shader compilation failed: ' + (details || 'No compiler details available'));
   };
   const engine = {
@@ -86,7 +86,7 @@ async function createScene(options) {
     return createWaterfallScene(options);
   }
   if (options.id === 'starlight' || options.id === 'desert') {
-    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-5');
+    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-glsl-fix-1');
     return createLandscapeScene(options);
   }
   const { createWeatherScene } = await import('./scenes/weather.js?v=20261114-3');

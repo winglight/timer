@@ -16,7 +16,7 @@ const PHOTO_UNIFORMS = /* glsl */`
   uniform float uTime;
   varying vec2 vScreenUv;
   vec3 photo(vec2 p) { return texture2D(uPhoto, vec2(p.x, 1.0 - p.y)).rgb; }
-  float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+  float landscapeLuminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 `;
 
 export const STARLIGHT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
@@ -127,7 +127,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     // Chroma alone would copy their silhouettes into the drifting clouds.
     float warmth = (c.r - c.b) / max(c.r + c.b, 0.025);
     float blue = 1.0 - smoothstep(-0.025, 0.065, warmth);
-    return blue * smoothstep(0.17, 0.21, luminance(c));
+    return blue * smoothstep(0.17, 0.21, landscapeLuminance(c));
   }
   float skyMask(vec2 p, vec3 c) {
     // Leave a few source pixels around each rock outline intact, including
@@ -160,7 +160,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     float offset = hash(vec2(seed, 8.1)) * interval;
     float eventTime = mod(uTime + offset, interval);
     float duration = mix(0.9, 2.8, hash(vec2(seed, 5.1)));
-    float active = smoothstep(0.0, 0.16, eventTime) *
+    float gustEnvelope = smoothstep(0.0, 0.16, eventTime) *
       (1.0 - smoothstep(duration - 0.28, duration, eventTime));
     float progress = clamp(eventTime / duration, 0.0, 1.0);
     float startX = mix(-0.28, 0.58, hash(vec2(seed, 11.3)));
@@ -174,7 +174,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     float body = exp(-local.x * local.x * 1.35 - local.y * local.y * 1.8);
     float wisps = dustNoise(vec2((p.x - centerX) * 42.0 + uTime * 0.9,
       p.y * 175.0 + seed * 17.0));
-    return body * smoothstep(0.28, 0.62, wisps) * active *
+    return body * smoothstep(0.28, 0.62, wisps) * gustEnvelope *
       mix(0.35, 1.0, hash(vec2(seed, 31.9)));
   }
   void main() {
@@ -194,7 +194,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     // A tiny refractive shimmer occupies the hot distant valley. Nearby rocks,
     // bushes and foreground stay sharp; the camera and whole photo stay fixed.
     float distanceBand = smoothstep(0.53, 0.61, p.y) * (1.0 - smoothstep(0.71, 0.78, p.y));
-    float bareGround = smoothstep(0.055, 0.13, luminance(original));
+    float bareGround = smoothstep(0.055, 0.13, landscapeLuminance(original));
     float heat = (noise(vec2(p.x * 47.0, p.y * 68.0 - uTime * 0.72)) - 0.5) * 0.0017;
     vec3 refracted = photo(p + vec2(heat, heat * 0.32) * distanceBand * bareGround);
     color = mix(color, refracted, distanceBand * bareGround);
@@ -204,7 +204,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     // valley as soft, broken veils instead of three permanent horizontal bands.
     float dust = 0.0;
     for (int i = 0; i < 5; i++) dust += gustDust(p, float(i) + 1.0);
-    float openGround = smoothstep(0.030, 0.11, luminance(original));
+    float openGround = smoothstep(0.030, 0.11, landscapeLuminance(original));
     float distantValley = smoothstep(0.565, 0.625, p.y) *
       (1.0 - smoothstep(0.775, 0.835, p.y));
     float dustAlpha = clamp(dust * edge * distantValley *
