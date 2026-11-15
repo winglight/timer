@@ -178,3 +178,28 @@ test('scene geometry has finite positions, valid indices and bounded instance at
     handle.dispose(); disposeBorrowed();
   }
 });
+
+
+test('star field uses independently seeded random positions, sizes and twinkle timing', async () => {
+  const { STARLIGHT_FRAGMENT_SHADER } = await import(moduleURL('scenes/landscape.js'));
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /floor\(q \* vec2\(92\.0, 54\.0\)\)/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.00048, 0\.00155, sizeSeed\)/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.65, 2\.9/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /pulsePhase/);
+});
+
+test('desert sand gusts have randomized event intervals, duration, size and velocity', async () => {
+  const { DESERT_FRAGMENT_SHADER } = await import(moduleURL('scenes/landscape.js'));
+  assert.match(DESERT_FRAGMENT_SHADER, /mix\(4\.5, 11\.5/);
+  assert.match(DESERT_FRAGMENT_SHADER, /mix\(0\.9, 2\.8/);
+  assert.match(DESERT_FRAGMENT_SHADER, /mix\(0\.018, 0\.064/);
+  assert.match(DESERT_FRAGMENT_SHADER, /mix\(0\.10, 0\.34/);
+  assert.match(DESERT_FRAGMENT_SHADER, /distantValley/);
+});
+
+test('waterfall refraction is localized and attenuated inside the pool mask', async () => {
+  const { WATERFALL_FRAGMENT_SHADER } = await import(moduleURL('scenes/waterfall.js'));
+  assert.match(WATERFALL_FRAGMENT_SHADER, /vec2\(0\.00022, 0\.000055\)/);
+  assert.match(WATERFALL_FRAGMENT_SHADER, /ripples \*= pool/);
+  assert.match(WATERFALL_FRAGMENT_SHADER, /\* 0\.00018/);
+});

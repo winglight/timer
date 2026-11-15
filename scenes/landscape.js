@@ -20,6 +20,7 @@ const PHOTO_UNIFORMS = /* glsl */`
 `;
 
 export const STARLIGHT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float segmentDistance(vec2 p, vec2 a, vec2 b) {
     vec2 ab = b - a;
     return length(p - a - ab * clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0));
@@ -58,16 +59,36 @@ export const STARLIGHT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     q = mix(p, q, sky * edge);
     vec3 color = skyPhoto(q);
 
-    // Twinkle belongs to photographed stellar highlights, never random dots.
-    vec2 texel = 2.0 / uPhotoSize;
-    float surround = (luminance(skyPhoto(q + vec2(texel.x, 0.0))) +
-      luminance(skyPhoto(q - vec2(texel.x, 0.0))) +
-      luminance(skyPhoto(q + vec2(0.0, texel.y))) +
-      luminance(skyPhoto(q - vec2(0.0, texel.y)))) * 0.25;
-    float star = smoothstep(0.035, 0.20, luminance(color) - surround);
-    float twinkle = sin(uTime * 1.8 + q.x * 381.0 + q.y * 277.0) * 0.10 +
-      sin(uTime * 0.87 + q.x * 179.0 - q.y * 313.0) * 0.06;
-    color *= 1.0 + star * twinkle;
+    // Each sky cell independently decides whether to host a star. Position,
+    // radius, hue, pulse speed and phase are seeded per cell, so the field is
+    // irregular and never flashes in sync.
+    vec2 grid = floor(q * vec2(92.0, 54.0));
+    float stars = 0.0;
+    vec3 starTint = vec3(0.0);
+    for (int y = -1; y <= 1; y++) {
+      for (int x = -1; x <= 1; x++) {
+        vec2 cell = grid + vec2(float(x), float(y));
+        float seed = hash(cell + 17.31);
+        if (seed < 0.16) {
+          vec2 jitter = vec2(hash(cell + 3.7), hash(cell + 8.9));
+          vec2 starPosition = (cell + 0.16 + 0.68 * jitter) / vec2(92.0, 54.0);
+          float sizeSeed = hash(cell + 29.4);
+          float radius = mix(0.00048, 0.00155, sizeSeed);
+          float distanceToStar = length((q - starPosition) * vec2(1.0, 0.82));
+          float core = exp(-distanceToStar * distanceToStar / (radius * radius * 1.7));
+          float pulseSpeed = mix(0.65, 2.9, hash(cell + 43.2));
+          float pulsePhase = hash(cell + 61.8) * 6.2831853;
+          float pulse = 0.20 + 0.80 * (0.5 + 0.5 * sin(uTime * pulseSpeed + pulsePhase));
+          float brightness = mix(0.32, 1.0, hash(cell + 79.1)) * pulse;
+          float present = 1.0;
+          stars += core * brightness * present;
+          starTint += core * brightness * mix(vec3(0.72, 0.82, 1.0),
+            vec3(1.0, 0.91, 0.76), hash(cell + 97.6)) * present;
+        }
+      }
+    }
+    float starVisibility = sky * (1.0 - smoothstep(0.69, 0.78, p.y));
+    color += starTint * starVisibility * 0.72;
 
     // One brief meteor at a time; the entire sky keeps its photographic detail.
     float phase = mod(uTime + 5.0, 29.0);
@@ -134,6 +155,28 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     gap = min(gap, max((1.409 - 1.059 * p.x - p.y) / 1.457, 0.0));
     return smoothstep(0.0, 0.085, gap);
   }
+  float gustDust(vec2 p, float seed) {
+    float interval = mix(4.5, 11.5, hash(vec2(seed, 2.7)));
+    float offset = hash(vec2(seed, 8.1)) * interval;
+    float eventTime = mod(uTime + offset, interval);
+    float duration = mix(0.9, 2.8, hash(vec2(seed, 5.1)));
+    float active = smoothstep(0.0, 0.16, eventTime) *
+      (1.0 - smoothstep(duration - 0.28, duration, eventTime));
+    float progress = clamp(eventTime / duration, 0.0, 1.0);
+    float startX = mix(-0.28, 0.58, hash(vec2(seed, 11.3)));
+    float speed = mix(0.10, 0.34, hash(vec2(seed, 14.9)));
+    float centerX = startX + progress * speed;
+    float centerY = mix(0.635, 0.755, hash(vec2(seed, 19.7)));
+    float width = mix(0.018, 0.064, hash(vec2(seed, 23.1)));
+    float height = mix(0.0022, 0.0085, hash(vec2(seed, 27.5)));
+    float curve = centerY + 0.0045 * sin((p.x - centerX) * 13.0 + progress * 5.0);
+    vec2 local = vec2((p.x - centerX) / width, (p.y - curve) / height);
+    float body = exp(-local.x * local.x * 1.35 - local.y * local.y * 1.8);
+    float wisps = dustNoise(vec2((p.x - centerX) * 42.0 + uTime * 0.9,
+      p.y * 175.0 + seed * 17.0));
+    return body * smoothstep(0.18, 0.72, wisps) * active *
+      mix(0.35, 1.0, hash(vec2(seed, 31.9)));
+  }
   void main() {
     vec2 uv = vScreenUv * uCover.xy + uCover.zw;
     vec2 p = vec2(uv.x, 1.0 - uv.y);
@@ -156,25 +199,17 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     vec3 refracted = photo(p + vec2(heat, heat * 0.32) * distanceBand * bareGround);
     color = mix(color, refracted, distanceBand * bareGround);
 
-    // Thin sand streamers follow several low ground contours at different
-    // depths. Advected texture makes them travel, rather than pulse in place.
+    // Distant gusts are separate events with independent random intervals,
+    // launch points, heights, widths, durations and speeds. They cross the
+    // valley as soft, broken veils instead of three permanent horizontal bands.
     float dust = 0.0;
-    for (int i = 0; i < 3; i++) {
-      float layer = float(i);
-      float base = 0.686 + layer * 0.092;
-      float curve = base + 0.012 * sin(p.x * 7.0 + layer * 1.6);
-      float shape = (p.y - curve) / (0.008 + layer * 0.004);
-      float vertical = exp(-shape * shape);
-      float speed = 0.032 + layer * 0.014;
-      vec2 flow = vec2(p.x * (6.5 - layer) - uTime * speed * 9.0, p.y * 82.0 + layer * 13.0);
-      float strand = smoothstep(0.36, 0.74, dustNoise(flow));
-      float gust = 0.62 + 0.38 * sin(uTime * 0.23 + layer * 2.1);
-      dust += vertical * strand * gust * (0.12 + layer * 0.035);
-    }
-    // Dark vegetation occludes most airborne sand so no band paints over it.
+    for (int i = 0; i < 5; i++) dust += gustDust(p, float(i) + 1.0);
     float openGround = smoothstep(0.030, 0.11, luminance(original));
-    float dustAlpha = clamp(dust * edge * (0.18 + openGround * 0.82), 0.0, 0.19);
-    color = mix(color, vec3(0.58, 0.34, 0.15), dustAlpha);
+    float distantValley = smoothstep(0.565, 0.625, p.y) *
+      (1.0 - smoothstep(0.775, 0.835, p.y));
+    float dustAlpha = clamp(dust * edge * distantValley *
+      (0.16 + openGround * 0.84) * 0.30, 0.0, 0.22);
+    color = mix(color, vec3(0.67, 0.43, 0.24), dustAlpha);
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
   }

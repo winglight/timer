@@ -65,12 +65,14 @@ export const WATERFALL_FRAGMENT_SHADER = /* glsl */`
     return water;
   }
   vec2 impactRipples(vec2 p, vec2 impact, float seed) {
-    vec2 d = (p - impact) * vec2(1.0, 5.0);
+    vec2 d = (p - impact) * vec2(1.0, 4.0);
     float distance = length(d);
-    float envelope = exp(-distance * 17.0);
-    float ripple = sin(distance * 190.0 - uTime * 2.5 + seed);
+    // Keep refraction local to the impact point: the earlier large UV offsets
+    // pulled several pixels from the cliff edge and visibly folded the pool.
+    float envelope = exp(-distance * 28.0);
+    float ripple = sin(distance * 142.0 - uTime * 2.1 + seed);
     vec2 direction = normalize(d + vec2(0.0001));
-    return direction * vec2(0.0020, 0.0007) * ripple * envelope;
+    return direction * vec2(0.00022, 0.000055) * ripple * envelope;
   }
   void main() {
     vec2 uvPhoto = vScreenUv * uCover.xy + uCover.zw;
@@ -91,7 +93,9 @@ export const WATERFALL_FRAGMENT_SHADER = /* glsl */`
     ripples += impactRipples(p, vec2(0.512, 0.738), 1.4);
     ripples += impactRipples(p, vec2(0.606, 0.738), 2.7);
     ripples += impactRipples(p, vec2(0.782, 0.738), 4.1);
-    ripples.x += (noise21(vec2(p.x * 35.0 - uTime * 0.16, p.y * 95.0)) - 0.5) * 0.0025;
+    ripples.x += (noise21(vec2(p.x * 35.0 - uTime * 0.16, p.y * 95.0)) - 0.5) * 0.00018;
+    // No ripple displacement is allowed to sample outside the water mask.
+    ripples *= pool;
     vec3 poolColor = photo(p + ripples);
     vec3 color = mix(fallColor, poolColor, pool / max(0.001, falls + pool));
     gl_FragColor = vec4(color, alpha);
