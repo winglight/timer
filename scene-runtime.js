@@ -62,11 +62,11 @@ async function createScene(options) {
     return createWoodlandScene(options);
   }
   if (options.id === 'waterfall') {
-    const { createWaterfallScene } = await import('./scenes/waterfall.js?v=20261115-3');
+    const { createWaterfallScene } = await import('./scenes/waterfall.js?v=20261115-4');
     return createWaterfallScene(options);
   }
   if (options.id === 'starlight' || options.id === 'desert') {
-    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-3');
+    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-4');
     return createLandscapeScene(options);
   }
   const { createWeatherScene } = await import('./scenes/weather.js?v=20261114-3');

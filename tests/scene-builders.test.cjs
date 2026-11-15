@@ -183,7 +183,7 @@ test('scene geometry has finite positions, valid indices and bounded instance at
 test('star field uses independently seeded random positions, sizes and twinkle timing', async () => {
   const { STARLIGHT_FRAGMENT_SHADER } = await import(moduleURL('scenes/landscape.js'));
   assert.match(STARLIGHT_FRAGMENT_SHADER, /floor\(q \* vec2\(92\.0, 54\.0\)\)/);
-  assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.00048, 0\.00155, sizeSeed\)/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.00115, 0\.0032, sizeSeed\)/);
   assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.65, 2\.9/);
   assert.match(STARLIGHT_FRAGMENT_SHADER, /pulsePhase/);
 });
@@ -197,9 +197,19 @@ test('desert sand gusts have randomized event intervals, duration, size and velo
   assert.match(DESERT_FRAGMENT_SHADER, /distantValley/);
 });
 
-test('waterfall refraction is localized and attenuated inside the pool mask', async () => {
+test('waterfall animation never displaces the source photograph and uses moving overlay details', async () => {
   const { WATERFALL_FRAGMENT_SHADER } = await import(moduleURL('scenes/waterfall.js'));
-  assert.match(WATERFALL_FRAGMENT_SHADER, /vec2\(0\.00022, 0\.000055\)/);
-  assert.match(WATERFALL_FRAGMENT_SHADER, /ripples \*= pool/);
-  assert.match(WATERFALL_FRAGMENT_SHADER, /\* 0\.00018/);
+  assert.match(WATERFALL_FRAGMENT_SHADER, /exact, undistorted coordinate/);
+  assert.match(WATERFALL_FRAGMENT_SHADER, /waterfallHighlight\(p\)/);
+  assert.match(WATERFALL_FRAGMENT_SHADER, /poolRipple\(p/);
+  assert.doesNotMatch(WATERFALL_FRAGMENT_SHADER, /photo\(p\s*\+/);
+  assert.doesNotMatch(WATERFALL_FRAGMENT_SHADER, /p\.y\s*-\s*phase\s*\*\s*0\.13/);
+});
+
+test('star field has visible random stars at multiple pixel sizes and independent twinkle phases', async () => {
+  const { STARLIGHT_FRAGMENT_SHADER } = await import(moduleURL('scenes/landscape.js'));
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /mix\(0\.00115, 0\.0032, sizeSeed\)/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /pulseSpeed/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /pulsePhase/);
+  assert.match(STARLIGHT_FRAGMENT_SHADER, /starTint \* starVisibility \* 1\.55/);
 });

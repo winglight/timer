@@ -73,7 +73,7 @@ export const STARLIGHT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
           vec2 jitter = vec2(hash(cell + 3.7), hash(cell + 8.9));
           vec2 starPosition = (cell + 0.16 + 0.68 * jitter) / vec2(92.0, 54.0);
           float sizeSeed = hash(cell + 29.4);
-          float radius = mix(0.00048, 0.00155, sizeSeed);
+          float radius = mix(0.00115, 0.0032, sizeSeed);
           float distanceToStar = length((q - starPosition) * vec2(1.0, 0.82));
           float core = exp(-distanceToStar * distanceToStar / (radius * radius * 1.7));
           float pulseSpeed = mix(0.65, 2.9, hash(cell + 43.2));
@@ -88,7 +88,7 @@ export const STARLIGHT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
       }
     }
     float starVisibility = sky * (1.0 - smoothstep(0.69, 0.78, p.y));
-    color += starTint * starVisibility * 0.72;
+    color += starTint * starVisibility * 1.55;
 
     // One brief meteor at a time; the entire sky keeps its photographic detail.
     float phase = mod(uTime + 5.0, 29.0);
@@ -174,7 +174,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     float body = exp(-local.x * local.x * 1.35 - local.y * local.y * 1.8);
     float wisps = dustNoise(vec2((p.x - centerX) * 42.0 + uTime * 0.9,
       p.y * 175.0 + seed * 17.0));
-    return body * smoothstep(0.18, 0.72, wisps) * active *
+    return body * smoothstep(0.28, 0.62, wisps) * active *
       mix(0.35, 1.0, hash(vec2(seed, 31.9)));
   }
   void main() {
@@ -208,7 +208,7 @@ export const DESERT_FRAGMENT_SHADER = PHOTO_UNIFORMS + /* glsl */`
     float distantValley = smoothstep(0.565, 0.625, p.y) *
       (1.0 - smoothstep(0.775, 0.835, p.y));
     float dustAlpha = clamp(dust * edge * distantValley *
-      (0.16 + openGround * 0.84) * 0.50, 0.0, 0.22);
+      (0.24 + openGround * 0.76) * 0.78, 0.0, 0.22);
     color = mix(color, vec3(0.67, 0.43, 0.24), dustAlpha);
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>

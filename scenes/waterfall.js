@@ -48,108 +48,56 @@ export const WATERFALL_FRAGMENT_SHADER = /* glsl */`
     float luminance = dot(original, vec3(0.2126, 0.7152, 0.0722));
     return band * cool * smoothstep(0.025, 0.105, luminance);
   }
-  vec3 fallingWater(vec2 p) {
-    float phase = fract(uTime * 0.48);
-    float other = fract(phase + 0.5);
-    float weight = 1.0 - abs(phase * 2.0 - 1.0);
-    float envelope = smoothstep(0.236, 0.32, p.y) * (1.0 - smoothstep(0.69, 0.744, p.y));
-    float bend = (noise21(vec2(p.x * 90.0, p.y * 12.0 - uTime * 1.7)) - 0.5) * 0.0023 * envelope;
-    vec2 a = vec2(p.x + bend, p.y - phase * 0.13 * envelope);
-    vec2 b = vec2(p.x + bend, p.y - other * 0.13 * envelope);
-    vec3 water = mix(photo(b), photo(a), weight);
-    // Advected thin structure modulates the real water exposure. This moves
-    // continuously down each fall instead of drawing detached white strokes.
-    float pulse = noise21(vec2(p.x * 240.0, p.y * 23.0 - uTime * 3.8));
-    pulse = pulse * 0.70 + noise21(vec2(p.x * 110.0 + 4.7, p.y * 14.0 - uTime * 2.0)) * 0.30;
-    water *= mix(0.77, 1.19, smoothstep(0.15, 0.88, pulse));
-    return water;
+  float flowNoise(vec2 p, float speed, float scale) {
+    vec2 flow = vec2(p.x * scale + 0.18 * sin(p.y * 8.0 + uTime * 0.7),
+      p.y * (scale * 0.23) - uTime * speed);
+    float broad = noise21(flow * 0.42);
+    float fine = noise21(flow * 1.7 + 13.4);
+    return broad * 0.42 + fine * 0.58;
   }
-  vec2 impactRipples(vec2 p, vec2 impact, float seed) {
-    vec2 d = (p - impact) * vec2(1.0, 4.0);
+  float waterfallHighlight(vec2 p) {
+    float n = flowNoise(p, 3.0, 190.0);
+    float threads = smoothstep(0.48, 0.78, n);
+    float glints = pow(max(0.0, sin(p.y * 105.0 - uTime * 4.2 +
+      sin(p.x * 34.0) * 1.4)), 10.0);
+    return 0.10 + threads * 0.20 + glints * 0.12;
+  }
+  float poolRipple(vec2 p, vec2 impact, float phase, float scale) {
+    vec2 d = (p - impact) * vec2(1.0, 3.8);
     float distance = length(d);
-    // Keep refraction local to the impact point: the earlier large UV offsets
-    // pulled several pixels from the cliff edge and visibly folded the pool.
-    float envelope = exp(-distance * 28.0);
-    float ripple = sin(distance * 142.0 - uTime * 2.1 + seed);
-    vec2 direction = normalize(d + vec2(0.0001));
-    return direction * vec2(0.00022, 0.000055) * ripple * envelope;
+    float radius = 0.003 + fract(uTime * 0.075 + phase) * 0.075;
+    float ring = exp(-pow((distance - radius) * scale, 2.0));
+    float fade = 1.0 - smoothstep(0.055, 0.085, distance);
+    return ring * fade;
   }
   void main() {
     vec2 uvPhoto = vScreenUv * uCover.xy + uCover.zw;
     vec2 p = vec2(uvPhoto.x, 1.0 - uvPhoto.y);
+    // The source photograph is sampled at its exact, undistorted coordinate.
+    // Motion is drawn as light/shadow detail over water, never by shifting the
+    // cliffs, stream banks or the waterfall photograph itself.
     vec3 original = texture2D(uPhoto, uvPhoto).rgb;
     float falls = fallsMatte(p, original);
-    // The pool ends before the foreground rocks. A narrow, irregular lower
-    // boundary and the original water colour protect the stones and fallen log.
     float lower = 0.790 + 0.008 * smoothstep(0.66, 0.94, p.x);
-    float pool = smoothstep(0.735, 0.754, p.y) * (1.0 - smoothstep(lower - 0.010, lower, p.y));
+    float pool = smoothstep(0.735, 0.754, p.y) *
+      (1.0 - smoothstep(lower - 0.010, lower, p.y));
     pool *= smoothstep(0.23, 0.33, p.x) * (1.0 - smoothstep(0.91, 0.98, p.x));
     float stone = smoothstep(0.12, 0.25, dot(original, vec3(0.2126, 0.7152, 0.0722)));
     pool *= 1.0 - stone;
     float alpha = max(falls, pool);
     if (alpha < 0.002) discard;
-    vec3 fallColor = fallingWater(p);
-    vec2 ripples = impactRipples(p, vec2(0.425, 0.738), 0.0);
-    ripples += impactRipples(p, vec2(0.512, 0.738), 1.4);
-    ripples += impactRipples(p, vec2(0.606, 0.738), 2.7);
-    ripples += impactRipples(p, vec2(0.782, 0.738), 4.1);
-    ripples.x += (noise21(vec2(p.x * 35.0 - uTime * 0.16, p.y * 95.0)) - 0.5) * 0.00018;
-    // No ripple displacement is allowed to sample outside the water mask.
-    ripples *= pool;
-    vec3 poolColor = photo(p + ripples);
-    vec3 color = mix(fallColor, poolColor, pool / max(0.001, falls + pool));
-    gl_FragColor = vec4(color, alpha);
+
+    float fallingGlints = waterfallHighlight(p);
+    float poolGlints = 0.0;
+    poolGlints += poolRipple(p, vec2(0.425, 0.738), 0.0, 165.0);
+    poolGlints += poolRipple(p, vec2(0.512, 0.738), 0.23, 155.0);
+    poolGlints += poolRipple(p, vec2(0.606, 0.738), 0.51, 145.0);
+    poolGlints += poolRipple(p, vec2(0.782, 0.738), 0.72, 135.0);
+
+    // A restrained moving sheen follows the real falling-water columns.
+    // Expanding elliptical rings suggest water spreading across the pool.
+    vec3 overlay = vec3(0.72, 0.86, 0.92) * (fallingGlints * falls * 0.72);
+    overlay += vec3(0.52, 0.72, 0.78) * (poolGlints * pool * 0.22);
+    gl_FragColor = vec4(original + overlay, alpha);
     #include <colorspace_fragment>
   }
-`;
-
-function photoCover(width, height, sourceWidth, sourceHeight) {
-  const scale = Math.max(width / sourceWidth, height / sourceHeight);
-  const x = width / (sourceWidth * scale), y = height / (sourceHeight * scale);
-  return [x, y, (1 - x) / 2, (1 - y) / 2];
-}
-
-export async function createWaterfallScene({ width, height, photoUrl, photoTexture }) {
-  const ownsPhoto = !photoTexture;
-  const photo = photoTexture || await new THREE.TextureLoader().loadAsync(photoUrl);
-  photo.colorSpace = THREE.SRGBColorSpace;
-  photo.minFilter = THREE.LinearMipmapLinearFilter;
-  photo.magFilter = THREE.LinearFilter;
-  photo.generateMipmaps = true;
-  const sourceWidth = photo.image?.naturalWidth || photo.image?.width;
-  const sourceHeight = photo.image?.naturalHeight || photo.image?.height;
-  if (!(sourceWidth > 0 && sourceHeight > 0)) {
-    if (ownsPhoto) photo.dispose();
-    throw new Error('Waterfall photograph has no dimensions');
-  }
-  const uniforms = {
-    uTime: { value: 0 }, uPhoto: { value: photo },
-    uCover: { value: new THREE.Vector4(...photoCover(width, height, sourceWidth, sourceHeight)) }
-  };
-  const material = new THREE.ShaderMaterial({
-    name: 'photographic-waterfall-flow', uniforms,
-    vertexShader: WATERFALL_VERTEX_SHADER, fragmentShader: WATERFALL_FRAGMENT_SHADER,
-    transparent: true, depthTest: false, depthWrite: false, toneMapped: false
-  });
-  const geometry = new THREE.PlaneGeometry(2, 2);
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.frustumCulled = false;
-  const scene = new THREE.Scene();
-  scene.name = 'Water descending over the photographed falls into a rippling pool';
-  scene.add(mesh);
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
-  camera.position.z = 2;
-  let disposed = false;
-  return {
-    scene, camera,
-    update(time) { if (!disposed) uniforms.uTime.value = time; },
-    resize(w, h) { if (!disposed) uniforms.uCover.value.set(...photoCover(w, h, sourceWidth, sourceHeight)); },
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      geometry.dispose(); material.dispose();
-      if (ownsPhoto) photo.dispose();
-      scene.clear();
-    }
-  };
-}
