@@ -213,3 +213,11 @@ test('star field has visible random stars at multiple pixel sizes and independen
   assert.match(STARLIGHT_FRAGMENT_SHADER, /pulsePhase/);
   assert.match(STARLIGHT_FRAGMENT_SHADER, /starTint \* starVisibility \* 1\.55/);
 });
+
+test('GLSL source does not shadow the built-in distance() function with a local variable', async () => {
+  const fs = await import('node:fs/promises');
+  for (const file of ['scenes/waterfall.js', 'scenes/woodland.js']) {
+    const source = await fs.readFile(require('node:path').join(__dirname, '..', file), 'utf8');
+    assert.equal(source.includes('float distance ='), false, file);
+  }
+});

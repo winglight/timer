@@ -31,8 +31,16 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.setClearColor(0x000000, 0);
-  renderer.debug.onShaderError = (gl, program) => {
-    throw new Error('Ambient shader compilation failed: ' + gl.getProgramInfoLog(program));
+  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+    const vertexLog = vertexShader ? gl.getShaderInfoLog(vertexShader) : '';
+    const fragmentLog = fragmentShader ? gl.getShaderInfoLog(fragmentShader) : '';
+    const programLog = gl.getProgramInfoLog(program) || '';
+    const details = [
+      fragmentLog && 'Fragment shader: ' + fragmentLog,
+      vertexLog && 'Vertex shader: ' + vertexLog,
+      programLog && 'Program: ' + programLog
+    ].filter(Boolean).join('\\n');
+    throw new Error('Ambient shader compilation failed: ' + (details || 'No compiler details available'));
   };
   const engine = {
     setSize(w, h, ratio) { renderer.setPixelRatio(ratio); renderer.setSize(w, h, false); },
@@ -58,15 +66,15 @@ async function createScene(options) {
     return createCloudScene(options);
   }
   if (options.id === 'forest' || options.id === 'blossom') {
-    const { createWoodlandScene } = await import('./scenes/woodland.js?v=20261115-2');
+    const { createWoodlandScene } = await import('./scenes/woodland.js?v=20261115-3');
     return createWoodlandScene(options);
   }
   if (options.id === 'waterfall') {
-    const { createWaterfallScene } = await import('./scenes/waterfall.js?v=20261115-4');
+    const { createWaterfallScene } = await import('./scenes/waterfall.js?v=20261115-5');
     return createWaterfallScene(options);
   }
   if (options.id === 'starlight' || options.id === 'desert') {
-    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-4');
+    const { createLandscapeScene } = await import('./scenes/landscape.js?v=20261115-5');
     return createLandscapeScene(options);
   }
   const { createWeatherScene } = await import('./scenes/weather.js?v=20261114-3');

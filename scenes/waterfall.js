@@ -64,10 +64,10 @@ export const WATERFALL_FRAGMENT_SHADER = /* glsl */`
   }
   float poolRipple(vec2 p, vec2 impact, float phase, float scale) {
     vec2 d = (p - impact) * vec2(1.0, 3.8);
-    float distance = length(d);
+    float radialDistance = length(d);
     float radius = 0.003 + fract(uTime * 0.075 + phase) * 0.075;
-    float ring = exp(-pow((distance - radius) * scale, 2.0));
-    float fade = 1.0 - smoothstep(0.055, 0.085, distance);
+    float ring = exp(-pow((radialDistance - radius) * scale, 2.0));
+    float fade = 1.0 - smoothstep(0.055, 0.085, radialDistance);
     return ring * fade;
   }
   void main() {

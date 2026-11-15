@@ -120,14 +120,14 @@ export const BLOSSOM_BRANCH_FRAGMENT_SHADER = /* glsl */`
   varying vec2 vScreenUv;
 
   float ellipseField(vec2 p, vec2 centre, vec2 radius) {
-    float distance = length((p - centre) / radius);
-    return 1.0 - smoothstep(0.68, 1.16, distance);
+    float radialDistance = length((p - centre) / radius);
+    return 1.0 - smoothstep(0.68, 1.16, radialDistance);
   }
   float stemField(vec2 p, vec2 a, vec2 b, float radius) {
     vec2 ab = b - a;
     float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
-    float distance = length(p - a - t * ab);
-    return 1.0 - smoothstep(radius * 0.55, radius * 1.8, distance);
+    float segmentDistance = length(p - a - t * ab);
+    return 1.0 - smoothstep(radius * 0.55, radius * 1.8, segmentDistance);
   }
   void main() {
     vec2 sourceUv = vScreenUv * uCover.xy + uCover.zw;
