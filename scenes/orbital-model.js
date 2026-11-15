@@ -1,7 +1,10 @@
 // Ambient scene, not an orbit propagator or a live weather product.
-// The Earth turns at its mean sidereal rate in an inertial presentation.
+// Earth and illumination are deliberately accelerated for visible ambient motion.
 // A literal Earth-fixed geostationary observer would see the same longitude.
 export const SIDEREAL_DAY_SECONDS = 86164.0905;
+export const EARTH_TIME_SCALE = 240;
+export const EARTH_VISUAL_DAY_SECONDS = SIDEREAL_DAY_SECONDS / EARTH_TIME_SCALE;
+export const SUNLIGHT_CYCLE_SECONDS = 210;
 export const ORBITAL_EPOCH_MS = Date.UTC(2026, 0, 1);
 export const TAU = Math.PI * 2;
 export const MAX_CYCLONES = 6;
@@ -11,11 +14,31 @@ const clamp = value => Math.min(1, Math.max(0, value));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 const radians = degrees => degrees * Math.PI / 180;
 
-/** One full turn per mean sidereal day, independent of frames and tab visibility. */
+/** About one degree per second, independent of frames and tab visibility. */
 export function earthRotationAt(timestampMs) {
   if (!Number.isFinite(timestampMs)) throw new TypeError('Earth time must be finite');
-  return positiveModulo((timestampMs - ORBITAL_EPOCH_MS) / 1000, SIDEREAL_DAY_SECONDS) /
-    SIDEREAL_DAY_SECONDS * TAU;
+  return positiveModulo((timestampMs - ORBITAL_EPOCH_MS) / 1000, EARTH_VISUAL_DAY_SECONDS) /
+    EARTH_VISUAL_DAY_SECONDS * TAU;
+}
+
+/**
+ * A moving sun changes the terminator itself, not just the texture beneath it.
+ * Keep its camera-facing component positive: 53–75% of the visible disk remains
+ * on the day side while the direction and curvature of the boundary evolve.
+ */
+export function sunlightDirectionAt(timestampMs) {
+  if (!Number.isFinite(timestampMs)) throw new TypeError('Sunlight time must be finite');
+  const phase = positiveModulo((timestampMs - ORBITAL_EPOCH_MS) / 1000, SUNLIGHT_CYCLE_SECONDS) /
+    SUNLIGHT_CYCLE_SECONDS * TAU;
+  const z = .28 + .22 * Math.sin(phase);
+  const radial = Math.sqrt(1 - z * z);
+  return [Math.cos(phase) * radial, Math.sin(phase) * radial, z];
+}
+
+/** Bounded wall-clock seconds keep monitor animation continuous on reselect. */
+export function displayTimeAt(timestampMs) {
+  if (!Number.isFinite(timestampMs)) throw new TypeError('Display time must be finite');
+  return positiveModulo((timestampMs - ORBITAL_EPOCH_MS) / 1000, 3600);
 }
 
 // The origin stays well out at sea, including the full radius of the visible
@@ -78,6 +101,12 @@ export const ORBITAL_INTERIORS = Object.freeze({
   landscape: {
     filename: 'orbital-interior.jpg',
     size: [1672, 941],
+    // Measured inner glass only, in source pixels, clockwise TL/TR/BR/BL.
+    screens: [
+      [[85, 353], [138, 360], [137, 429], [84, 423]],
+      [[1544, 379], [1600, 373], [1600, 430], [1544, 433]]
+    ],
+    readouts: [[1436, 535, 1443, 545], [1448, 537, 1455, 546], [1436, 549, 1443, 558], [1448, 550, 1455, 558]],
     aperture: [[299/1672, 194/941], [1375/1672, 194/941], [1408/1672, 233/941], [1406/1672, 644/941], [1358/1672, 695/941], [307/1672, 695/941], [261/1672, 644/941], [261/1672, 233/941]],
     // A real handrail crosses the lower glass. Stars can show through its gaps,
     // but fit the full Earth and atmosphere above the top edge of the rail.
@@ -86,11 +115,40 @@ export const ORBITAL_INTERIORS = Object.freeze({
   portrait: {
     filename: 'orbital-interior-portrait.jpg',
     size: [1086, 1448],
+    screens: [
+      [[184, 572], [232, 579], [232, 678], [184, 678]],
+      [[859, 602], [912, 596], [912, 678], [859, 681]]
+    ],
+    readouts: [[775, 805, 782, 819], [787, 805, 794, 819], [775, 825, 782, 839], [788, 826, 795, 840]],
     aperture: [[375/1086, 307/1448], [710/1086, 307/1448], [742/1086, 345/1448], [742/1086, 1059/1448], [710/1086, 1099/1448], [376/1086, 1099/1448], [342/1086, 1059/1448], [342/1086, 345/1448]]
   }
 });
 
 export const interiorForAspect = (width, height) => width / height <= 1 ? 'portrait' : 'landscape';
+
+/** Source-photo coordinates to a monitor's unit square, with real perspective. */
+export function orbitalScreenMaps(profile) {
+  const [width, height] = profile.size;
+  return profile.screens.map(points => {
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = points.map(([x, y]) => [x / width, y / height]);
+    const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+    const dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+    const denominator = dx1 * dy2 - dx2 * dy1;
+    const g = (dx3 * dy2 - dx2 * dy3) / denominator;
+    const h = (dx1 * dy3 - dx3 * dy1) / denominator;
+    const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0;
+    const d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+    const determinant = a * (e - f * h) - b * (d - f * g) + c * (d * h - e * g);
+    return [e - f * h, c * h - b, b * f - c * e,
+      f * g - d, a - c * g, c * d - a * f,
+      d * h - e * g, b * g - a * h, a * e - b * d].map(value => value / determinant);
+  });
+}
+
+export function orbitalReadoutRects(profile) {
+  const [width, height] = profile.size;
+  return profile.readouts.map(([left, top, right, bottom]) => [left / width, top / height, right / width, bottom / height]);
+}
 
 /** Centered cover transform for the undistorted photographic interior plate. */
 export function orbitalPhotoCover(width, height, sourceWidth, sourceHeight) {

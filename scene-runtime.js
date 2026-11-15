@@ -57,11 +57,11 @@ async function createThreeRenderer({ canvas, width, height, pixelRatio }) {
 
 async function createScene(options) {
   if (options.id === 'hearth') {
-    const { createHearthScene } = await import('./scenes/hearth.js?v=20261115-photo-scenes-1');
+    const { createHearthScene } = await import('./scenes/hearth.js?v=20261115-visible-motion-1');
     return createHearthScene(options);
   }
   if (options.id === 'orbital') {
-    const { createOrbitalScene } = await import('./scenes/orbital.js?v=20261115-photo-scenes-1');
+    const { createOrbitalScene } = await import('./scenes/orbital.js?v=20261115-visible-motion-1');
     return createOrbitalScene(options);
   }
   if (options.id === 'ocean') {
@@ -229,8 +229,8 @@ export class SceneRuntime {
     const generation = this.generation, id = this.scene;
     // Capture the selected image before any asynchronous import or texture load.
     const image = this.world.querySelector('[data-scene-layer="' + id + '"] img');
-    // Some scenes use a rendered still for the fallback but sample an unlit
-    // source plate, so frozen fire/clouds never get baked into live motion.
+    // Keep a scene's original source plate separate from its rendered fallback,
+    // so loading the live effect never samples a previously processed frame.
     const photoUrl = image ? (image.dataset?.sceneTexture || image.currentSrc || image.src) : '';
     const task = (async () => {
       let handle = null;

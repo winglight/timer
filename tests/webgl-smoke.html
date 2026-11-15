@@ -76,6 +76,46 @@ window.runInvalidShaderControls = async () => {
   } finally { renderer.dispose(); renderer.forceContextLoss(); }
 };
 
+// Small nonzero pixel differences can still look completely static. Measure
+// each requested moving subject separately so room light cannot hide a frozen
+// flame, and a rotating Earth cannot hide an inactive cabin display.
+function regionMotion(frames, indices) {
+  let meanDelta = 0, changedFraction = 0;
+  for (const frame of frames.slice(1)) {
+    let total = 0, changed = 0;
+    for (const offset of indices) {
+      let largest = 0;
+      for (let channel = 0; channel < 3; channel++) {
+        const difference = Math.abs(frame[offset + channel] - frames[0][offset + channel]);
+        total += difference;
+        largest = Math.max(largest, difference);
+      }
+      if (largest >= 8) changed++;
+    }
+    meanDelta = Math.max(meanDelta, total / Math.max(1, indices.length * 3));
+    changedFraction = Math.max(changedFraction, changed / Math.max(1, indices.length));
+  }
+  return { pixels:indices.length, meanDelta, changedFraction };
+}
+
+function motionCheck(name, frames, indices, minimumMeanDelta, minimumChangedFraction) {
+  const metrics = regionMotion(frames, indices);
+  return { name, ...metrics, minimumMeanDelta, minimumChangedFraction,
+    ok:metrics.pixels >= 20 && metrics.meanDelta >= minimumMeanDelta &&
+       metrics.changedFraction >= minimumChangedFraction };
+}
+
+function frozenRegionControl(name, frames, indices, meanThreshold, fractionThreshold) {
+  const first = frames[0], frozen = frames.at(-1).slice();
+  for (const offset of indices) frozen.set(first.subarray(offset, offset + 4), offset);
+  let changedOutside = 0;
+  for (let offset = 0; offset < first.length; offset += 4) {
+    if (first[offset] !== frozen[offset] || first[offset+1] !== frozen[offset+1] || first[offset+2] !== frozen[offset+2]) changedOutside++;
+  }
+  const rejected = !motionCheck(name, [first, frozen], indices, meanThreshold, fractionThreshold).ok;
+  return { name, rejected, changedOutside, ok:rejected && changedOutside > 0 };
+}
+
 window.runAmbientCase = async id => {
   await runtime.setScene(id);
   await runtime.ready;
@@ -87,32 +127,89 @@ window.runAmbientCase = async id => {
   if (!gl) throw new Error('The production renderer did not create a WebGL2 context');
   const width = gl.drawingBufferWidth, height = gl.drawingBufferHeight;
   const frames = [];
+  const motionChecks = [], negativeControls = [];
   const savedNow = Date.now;
-  const epoch = savedNow();
+  const enhanced = id === 'hearth' || id === 'orbital';
+  const epoch = enhanced ? Date.UTC(2026, 10, 15, 12) : savedNow();
+  const uniforms = runtime.active.scene.children.find(child => child.material?.uniforms)?.material.uniforms;
+  const readFrame = () => {
+    const pixels = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    const error = gl.getError();
+    if (error !== gl.NO_ERROR) throw new Error(id + ': GL error ' + error);
+    return pixels;
+  };
+  let initialSunlight, frozenSunFrame;
   try {
-    for (const time of [0, 3.25, 9.5]) {
-      // Orbital time is wall-clock-based; advance it deterministically without
-      // speeding up production animation or waiting through an entire orbit.
+    for (const time of enhanced ? [0, .65, 1.4, 3.25, 9.5] : [0, 3.25, 9.5]) {
+      // Advance actual elapsed seconds. The scene itself owns its chosen visual
+      // speed; the test does not add another time-lapse multiplier.
       Date.now = () => epoch + time * 1000;
       runtime.elapsed = time;
       runtime.render(0);
       if (!runtime.active || runtime.failedScene) throw new Error('Render failed for ' + id);
-      const pixels = new Uint8Array(width * height * 4);
-      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      const error = gl.getError();
-      if (error !== gl.NO_ERROR) throw new Error(id + ': GL error ' + error);
-      frames.push(pixels);
+      frames.push(readFrame());
+      if (time === 0 && uniforms?.uSunlight) initialSunlight = uniforms.uSunlight.value.clone();
+    }
+    if (id === 'orbital' && initialSunlight) {
+      // Hold every other end-frame uniform fixed and restore only the old sun.
+      // A changed texture orientation alone cannot pass the terminator check.
+      const currentSunlight = uniforms.uSunlight.value.clone();
+      uniforms.uSunlight.value.copy(initialSunlight);
+      runtime.renderer.render(runtime.active.scene, runtime.active.camera);
+      frozenSunFrame = readFrame();
+      uniforms.uSunlight.value.copy(currentSunlight);
+      runtime.renderer.render(runtime.active.scene, runtime.active.camera);
     }
     // Capture before returning to the event loop: production deliberately uses
     // preserveDrawingBuffer:false, so a later screenshot may be a cleared buffer.
     window.ambientLastFramePng = canvas.toDataURL('image/png');
   } finally { Date.now = savedNow; }
+  if (enhanced) {
+    const cover = uniforms.uCover.value;
+    const regions = id === 'hearth' ? { flame:[], room:[] } : { earth:[], screen1:[], screen2:[] };
+    const inBox = (x, y, box) => x >= box.x && x <= box.z && y >= box.y && y <= box.w;
+    for (let row = 0; row < height; row++) {
+      const v = (row + .5) / height, sourceY = 1 - (v * cover.y + cover.w);
+      for (let column = 0; column < width; column++) {
+        const u = (column + .5) / width, sourceX = u * cover.x + cover.z;
+        const offset = (row * width + column) * 4;
+        if (id === 'hearth') {
+          if (inBox(sourceX, sourceY, uniforms.uFlameBounds.value)) regions.flame.push(offset);
+          if (sourceY > .2 && sourceY < .95 && !inBox(sourceX, sourceY, uniforms.uOpening.value)) regions.room.push(offset);
+        } else {
+          const layout = uniforms.uLayout.value;
+          const dx = (u - layout.x) * width / height / layout.z, dy = (v - layout.y) / layout.z;
+          if (dx * dx + dy * dy < .92 * .92) regions.earth.push(offset);
+          (uniforms.uScreenMaps?.value || []).forEach((matrix, index) => {
+            const m = matrix.elements, divisor = m[2] * sourceX + m[5] * sourceY + m[8];
+            const x = (m[0] * sourceX + m[3] * sourceY + m[6]) / divisor;
+            const y = (m[1] * sourceX + m[4] * sourceY + m[7]) / divisor;
+            if (x > .06 && x < .94 && y > .06 && y < .94) regions['screen' + (index + 1)].push(offset);
+          });
+        }
+      }
+    }
+    if (id === 'hearth') {
+      motionChecks.push(motionCheck('photographed flames', frames, regions.flame, 4, .12));
+      motionChecks.push(motionCheck('room firelight', frames, regions.room, 1.2, .03));
+      negativeControls.push(frozenRegionControl('frozen flames with moving room', frames, regions.flame, 4, .12));
+    } else {
+      motionChecks.push(motionCheck('Earth surface', frames, regions.earth, 3, .15));
+      motionChecks.push(motionCheck('left cabin display', frames, regions.screen1, 2, .05));
+      motionChecks.push(motionCheck('right cabin display', frames, regions.screen2, 2, .05));
+      motionChecks.push(motionCheck('independent sunlight boundary', frozenSunFrame ? [frozenSunFrame, frames.at(-1)] : [frames[0], frames[0]], regions.earth, 1.2, .03));
+      negativeControls.push(frozenRegionControl('frozen left display with moving Earth and right display', frames, regions.screen1, 2, .05));
+      negativeControls.push(frozenRegionControl('frozen right display with moving Earth and left display', frames, regions.screen2, 2, .05));
+    }
+  }
   let visiblePixels = 0, changedPixels = 0;
   for (let i = 0; i < frames[0].length; i += 4) {
     if (frames.some(frame => frame[i+3] && (frame[i] || frame[i+1] || frame[i+2]))) visiblePixels++;
     if (frames.slice(1).some(frame => frame[i] !== frames[0][i] || frame[i+1] !== frames[0][i+1] || frame[i+2] !== frames[0][i+2] || frame[i+3] !== frames[0][i+3])) changedPixels++;
   }
-  return { id, ok:visiblePixels > 0 && changedPixels > 0, visiblePixels, changedPixels, width, height,
+  return { id, ok:visiblePixels > 0 && changedPixels > 0 && motionChecks.every(check => check.ok) && negativeControls.every(check => check.ok), visiblePixels, changedPixels, width, height,
+    motionChecks, negativeControls,
     glVersion:gl.getParameter(gl.VERSION), shaderVersion:gl.getParameter(gl.SHADING_LANGUAGE_VERSION) };
 };
 window.ambientReady = true;

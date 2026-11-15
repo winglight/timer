@@ -35,9 +35,9 @@ The imagery is used with attribution; the scene implies no NASA endorsement.
 
 ## Motion and viewpoint
 
-- Solid Earth: one revolution per 86,164.0905 seconds, the mean sidereal day. The animation reads the wall clock every update so tab suspension, scene switching and low frame rates do not change the rotation rate. This is a mean-rate visual model, not a UT1/EOP ephemeris.
-- Viewpoint: an artistic, inertially presented observation window at geosynchronous-orbit altitude. A literal Earth-facing geostationary station stays over the same longitude and would not see a full rotation of the Earth below it. The scene preserves the requested visible real-time turn, rather than claiming to simulate that orbit exactly.
-- Solar direction and axial tilt are illustrative and do not predict the current terminator or seasonal illumination.
+- Solid Earth: the requested visible-motion revision uses 240 times the mean sidereal rate, completing one revolution in 86,164.0905 / 240 ≈ 359 seconds. The animation reads the wall clock every update, so scene switching and background suspension do not reset its phase. This is deliberately accelerated and is not a UT1/EOP ephemeris.
+- Viewpoint: an artistic observation window at geosynchronous-orbit altitude. A literal Earth-facing geostationary station stays over the same longitude; the scene prioritizes visible planetary motion and does not simulate that orbit exactly.
+- Solar direction moves on a separate 210-second cycle to make the day/night boundary visibly change while retaining an illuminated portion of Earth. Solar direction and axial tilt are illustrative; they do not predict current or seasonal illumination.
 - Weather: randomized procedural ocean cyclone vignettes, seeded by time and ocean basin, with compressed growth/dissipation over several minutes. Their centers remain in predefined open-ocean regions, the shader clips simulated cloud bands to an ocean mask, and rotation reverses between hemispheres. They are not a weather forecast or a physical fluid simulation.
 - Stars stay fixed; there is no atmospheric twinkling in the space view.
 

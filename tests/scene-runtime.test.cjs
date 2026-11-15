@@ -150,11 +150,11 @@ test('a scene may animate its source plate while retaining a different rendered 
     image: {
       currentSrc: 'https://timer.example/assets/scenes/hearth-still.jpg',
       src: 'https://timer.example/assets/scenes/hearth-still.jpg',
-      dataset: { sceneTexture: 'assets/scenes/hearth-natural.jpg' }
+      dataset: { sceneTexture: 'assets/scenes/hearth-lively.jpg' }
     }
   });
   await h.ready();
-  assert.equal(h.requested[0].photoUrl, 'assets/scenes/hearth-natural.jpg', 'the animation samples its original plate rather than a previously rendered frame');
+  assert.equal(h.requested[0].photoUrl, 'assets/scenes/hearth-lively.jpg', 'the animation samples its original plate rather than a previously rendered frame');
   assert.equal(h.frames.size, 1);
   h.runtime.destroy();
 });

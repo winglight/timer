@@ -1,14 +1,16 @@
 import * as THREE from '../vendor/three.module.js';
 import { computePhotoCover } from './weather.js';
 
-// Measured in the natural-fire photograph, from its top-left corner. All wood,
-// stone and furniture retain their photographed shape and source coordinates.
+// Measured in the lively-fire photograph, from its top-left corner. Fuel and
+// surrounding room geometry retain their photographed source coordinates.
 export const HEARTH_LAYOUT = {
-  opening: [0.367, 0.357, 0.629, 0.708],
-  fire: [0.497, 0.622, 0.072, 0.145],
-  flameBounds: [0.442, 0.481, 0.535, 0.628],
-  // The upper edge of the diagonal log: left x/y, right x/y.
-  fuelEdge: [0.413, 0.632, 0.558, 0.565]
+  opening: [0.358, 0.346, 0.641, 0.710],
+  fire: [0.501, 0.627, 0.115, 0.250],
+  flameBounds: [0.388, 0.360, 0.610, 0.675],
+  // Upper wood envelope, including the central upright charred piece. Flame
+  // pixels among/below these smaller split logs only change brightness.
+  fuelContour: [[0.391, 0.655], [0.497, 0.612], [0.515, 0.587],
+    [0.534, 0.591], [0.563, 0.628], [0.616, 0.666]]
 };
 
 function scalarNoise(position, seed) {
@@ -21,13 +23,13 @@ function scalarNoise(position, seed) {
   return hash(cell) * (1 - blend) + hash(cell + 1) * blend;
 }
 
-/** Small continuous changes; the photographed fire is already fully present. */
+/** Visible but continuous firelight variation; no frame-based random flashes. */
 export function firelightAt(time) {
   const t = Number.isFinite(time) ? Math.max(0, time) : 0;
   return [
-    0.95 + scalarNoise(t * 1.41, 2.3) * 0.09 + scalarNoise(t * 6.7, 9.1) * 0.04,
-    (scalarNoise(t * 1.73, 4.7) - 0.5) * 0.0048,
-    (scalarNoise(t * 2.11, 7.2) - 0.5) * 0.0032
+    0.72 + scalarNoise(t * 0.91, 2.3) * 0.40 + scalarNoise(t * 3.7, 9.1) * 0.19,
+    (scalarNoise(t * 1.21, 4.7) - 0.5) * 0.024 + (scalarNoise(t * 3.3, 1.8) - 0.5) * 0.004,
+    (scalarNoise(t * 1.57, 7.2) - 0.5) * 0.014
   ];
 }
 
@@ -47,7 +49,7 @@ export const HEARTH_FRAGMENT_SHADER = /* glsl */`
   uniform vec4 uOpening;
   uniform vec4 uFire;
   uniform vec4 uFlameBounds;
-  uniform vec4 uFuelEdge;
+  uniform vec2 uFuelContour[6];
   uniform vec2 uPhotoTexel;
   varying vec2 vScreenUv;
 
@@ -73,8 +75,14 @@ export const HEARTH_FRAGMENT_SHADER = /* glsl */`
       (1.0 - smoothstep(bounds.w - feather, bounds.w + feather, p.y));
   }
   float fuelTop(float x) {
-    return mix(uFuelEdge.y, uFuelEdge.w,
-      clamp((x - uFuelEdge.x) / (uFuelEdge.z - uFuelEdge.x), 0.0, 1.0));
+    float edge = uFuelContour[0].y;
+    for (int i = 0; i < 5; i++) {
+      if (x >= uFuelContour[i].x) {
+        edge = mix(uFuelContour[i].y, uFuelContour[i + 1].y,
+          clamp((x - uFuelContour[i].x) / (uFuelContour[i + 1].x - uFuelContour[i].x), 0.0, 1.0));
+      }
+    }
+    return edge;
   }
   float motionArea(vec2 p) {
     // A margin above the real wood prevents either side of the lookup from
@@ -84,28 +92,28 @@ export const HEARTH_FRAGMENT_SHADER = /* glsl */`
   }
   float flameKey(vec3 color) {
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    float warm = smoothstep(0.045, 0.16, color.r - color.b);
-    float yellow = smoothstep(0.065, 0.20, color.g);
-    return max(warm * yellow * smoothstep(0.075, 0.19, luminance),
+    // Include translucent orange edges in the light modulation, not only cores.
+    float warm = smoothstep(0.006, 0.040, color.r - color.b);
+    return max(warm * smoothstep(0.004, 0.040, luminance),
                smoothstep(0.60, 0.84, luminance));
   }
   vec3 photoAt(vec2 p) {
     return texture2D(uPhoto, vec2(p.x, 1.0 - p.y)).rgb;
   }
   float floorShadowArea(vec2 p) {
-    // Small patches of visible floor beside the chair/table feet. These bounds
+    // Visible floor beside the chair/table feet. These bounds
     // select existing photograph shadows; they never define a shadow silhouette.
     // Keep a clear margin around legs, chair rails, rug, basket and fireplace.
-    float left = max(boxMask(p, vec4(0.013, 0.900, 0.079, 0.982), 0.005),
-                     boxMask(p, vec4(0.137, 0.906, 0.181, 0.992), 0.005));
-    float right = max(boxMask(p, vec4(0.845, 0.910, 0.871, 0.985), 0.005),
-                      boxMask(p, vec4(0.917, 0.925, 0.963, 0.992), 0.005));
-    return max(left, right);
+    float left = boxMask(p, vec4(0.079, 0.911, 0.205, 0.992), 0.010);
+    float right = boxMask(p, vec4(0.842, 0.925, 0.985, 0.992), 0.010);
+    // The hearth's existing soft floor shadow is also visible in portrait crop.
+    float hearth = boxMask(p, vec4(0.282, 0.824, 0.735, 0.864), 0.007);
+    return max(max(left, right), hearth);
   }
   float photographedSoftShadow(vec2 p) {
     // Reuse the photo's existing mip chain: two low-frequency samples only in
     // the small floor patches, with no per-pixel blur loop or extra texture.
-    vec3 lowFrequency = textureLod(uPhoto, vec2(p.x, 1.0 - p.y), 4.3).rgb;
+    vec3 lowFrequency = textureLod(uPhoto, vec2(p.x, 1.0 - p.y), 3.6).rgb;
     float luminance = dot(lowFrequency, vec3(0.2126, 0.7152, 0.0722));
     return 1.0 - smoothstep(0.012, 0.075, luminance);
   }
@@ -118,50 +126,61 @@ export const HEARTH_FRAGMENT_SHADER = /* glsl */`
     float movable = motionArea(p);
 
     if (movable > 0.001) {
-      float rise = clamp((fuelTop(p.x) - p.y) / 0.128, 0.0, 1.0);
-      float travel = smoothNoise(vec2(rise * 3.7 - uTime * 1.24, p.x * 31.0));
-      float fine = smoothNoise(vec2(p.x * 143.0, p.y * 159.0 + uTime * 1.63));
-      float heightPulse = smoothNoise(vec2(p.x * 57.0, uTime * 1.11 + 5.3));
-      vec2 flow = vec2(
-        (travel - 0.5) * 0.0044 + (fine - 0.5) * 0.0010 + uFireLight.y * 0.32,
-        (heightPulse - 0.5) * 0.0034 + uFireLight.z * 0.28
-      ) * (0.20 + rise * 0.80) * movable;
-      vec2 movingP = p + flow;
+      float anchor = fuelTop(p.x) - 0.010;
+      float flameHeight = max(0.08, anchor - uFlameBounds.y);
+      float rise = clamp((anchor - p.y) / flameHeight, 0.0, 1.2);
+      // Separate tongues evolve at different rates. Turbulence travels upwards;
+      // the flame tips bend and rise instead of shifting as one solid cut-out.
+      float travel = smoothNoise(vec2(p.x * 37.0, rise * 4.2 - uTime * 2.5));
+      float curl = smoothNoise(vec2(p.x * 85.0 + rise * 1.8, rise * 8.0 - uTime * 4.2));
+      float heightPulse = smoothNoise(vec2(p.x * 51.0 + 8.3, uTime * 1.85));
+      float heightScale = 0.80 + heightPulse * 0.42;
+      float rootLock = smoothstep(0.0, 0.22, rise);
+      float topRoom = smoothstep(uOpening.y + 0.012, uOpening.y + 0.045, p.y);
+      vec2 movingP = p;
+      movingP.y = mix(p.y, anchor - (anchor - p.y) / heightScale, rootLock * movable * topRoom);
+      movingP.x += ((travel - 0.5) * 0.026 + (curl - 0.5) * 0.010 +
+        uFireLight.y * 0.25) * pow(clamp(rise, 0.0, 1.0), 0.72) * movable;
       vec3 moved = photoAt(movingP);
-      float flame = max(flameKey(original), flameKey(moved));
-      // Replace the existing flame sample once. There is no second flame layer,
-      // added flame geometry or additive sprite left over the original picture.
-      float replace = smoothstep(0.025, 0.18, flame) * movable * motionArea(movingP);
+      // Replace the entire safe firebox sample, including dim translucent tips
+      // and their dark background. A colour-key blend leaves an unmoving orange
+      // silhouette behind its displaced yellow core. The dark firebox receives
+      // only the associated heat shimmer; the wood and room stay outside it.
+      float replace = movable * motionArea(movingP);
       color = mix(original, moved, replace);
     }
 
     float opening = boxMask(p, uOpening, 0.004);
-    float fireRegion = boxMask(p, vec4(0.441, 0.482, 0.580, 0.687), 0.006);
+    float fireRegion = boxMask(p, vec4(uFlameBounds.xy - vec2(0.012),
+      uFlameBounds.z + 0.020, uOpening.w - 0.015), 0.006);
     float photographedFlame = flameKey(color) * fireRegion;
     float variation = uFireLight.x - 1.0;
-    // Preserve the photograph's exposure, colours, ember cracks and real bark.
-    // The subtle modulation follows the bright fire; it does not paint over logs.
-    color *= 1.0 + photographedFlame * variation * 0.85;
+    // The luminous pixels change as individual tongues rise through the image.
+    // Solid wood retains its original sampled coordinates and photographed bark.
+    float localFlicker = smoothNoise(vec2(p.x * 91.0, p.y * 79.0 + uTime * 4.5)) - 0.5;
+    color *= 1.0 + photographedFlame * (variation * 0.60 + localFlicker * 0.38);
 
     vec2 light = vec2(uFire.x + uFireLight.y, uFire.y - 0.018 + uFireLight.z);
-    float wall = ellipse(p, light - vec2(0.0, 0.12), vec2(0.57, 0.43));
-    float floor = ellipse(p, vec2(light.x, 0.85), vec2(0.42, 0.21)) * smoothstep(0.71, 0.79, p.y);
-    float reflected = (wall * 0.43 + floor * 0.64) * (1.0 - opening);
-    vec3 warmth = vec3(1.0, 0.64, 0.35);
-    color *= vec3(1.0) + warmth * reflected * variation * 1.35;
+    float wall = ellipse(p, light - vec2(0.0, 0.11), vec2(0.62, 0.48));
+    float floor = ellipse(p, vec2(light.x, 0.86), vec2(0.55, 0.25)) * smoothstep(0.71, 0.79, p.y);
+    float stone = ellipse(p, light, vec2(0.28, 0.28));
+    float outdoors = boxMask(p, vec4(0.048, 0.072, 0.186, 0.405), 0.012);
+    float reflected = (wall * 0.58 + floor * 0.96 + stone * 0.37) * (1.0 - opening) * (1.0 - outdoors);
+    vec3 warmth = vec3(1.0, 0.70, 0.39);
+    color *= vec3(1.0) + warmth * reflected * variation * 2.15;
 
     float shadowArea = floorShadowArea(p);
     if (shadowArea > 0.001) {
-      vec2 motion = uFireLight.yz / vec2(0.0024, 0.0016);
-      motion *= 3.5 / max(1.0, length(motion));
+      vec2 motion = uFireLight.yz / vec2(0.014, 0.007);
+      motion *= 18.0 / max(1.0, length(motion));
       vec2 offset = motion * uPhotoTexel;
       float restingShadow = photographedSoftShadow(p);
       float movedShadow = photographedSoftShadow(p + offset);
-      // Move only the soft illumination boundary by at most 3.5 source pixels.
+      // Move only the soft illumination boundary by at most 18 source pixels.
       // Positive/negative differences preserve the original exposure; the fixed
       // colour sample above keeps all floor grain and furniture stationary.
-      float difference = clamp((movedShadow - restingShadow) * 0.34, -0.016, 0.016);
-      color *= 1.0 - difference * shadowArea;
+      float difference = clamp((movedShadow - restingShadow) * 0.90, -0.16, 0.16);
+      color *= 1.0 - difference * shadowArea * floorShadowArea(p + offset);
     }
 
     gl_FragColor = vec4(color, 1.0);
@@ -184,7 +203,7 @@ export async function createHearthScene({ width, height, photoUrl, photoTexture 
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = true;
   const scene = new THREE.Scene();
-  scene.name = 'Natural wood fire with gentle photographic flame motion';
+  scene.name = 'Lively photographic wood fire with moving reflected light';
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
   camera.position.z = 2;
   const uniforms = {
@@ -195,7 +214,7 @@ export async function createHearthScene({ width, height, photoUrl, photoTexture 
     uOpening: { value: new THREE.Vector4(...HEARTH_LAYOUT.opening) },
     uFire: { value: new THREE.Vector4(...HEARTH_LAYOUT.fire) },
     uFlameBounds: { value: new THREE.Vector4(...HEARTH_LAYOUT.flameBounds) },
-    uFuelEdge: { value: new THREE.Vector4(...HEARTH_LAYOUT.fuelEdge) },
+    uFuelContour: { value: HEARTH_LAYOUT.fuelContour.map(point => new THREE.Vector2(...point)) },
     uPhotoTexel: { value: new THREE.Vector2(1 / sourceWidth, 1 / sourceHeight) }
   };
   const geometry = new THREE.PlaneGeometry(2, 2);

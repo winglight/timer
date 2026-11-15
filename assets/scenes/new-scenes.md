@@ -6,31 +6,34 @@ spaces; they are not documentary photographs of a cabin or an actual ISS module.
 
 ## Cabin fireplace
 
-- `hearth-natural.jpg`: final 1672 × 941 generated photograph with an ordinary
-  small wood fire, charred bark, ash and ember detail. The source PNG was
-  converted to quality-94 JPEG without changing its framing.
-- `hearth-still.jpg`: the same approved photograph, used for static,
-  reduced-motion and unavailable-WebGL fallback.
-- `hearth-thumb.jpg`: 240 × 150 menu thumbnail.
-- `hearth.jpg`: earlier unlit room plate, retained as the generation source.
-  The live scene no longer loads it.
+- `hearth-lively.jpg`: final 1672 × 941 generated photograph, with several
+  thinner split logs, red embers and a substantially taller natural fire. The
+  PNG was converted to quality-94 JPEG without changing its framing.
+- `hearth-still.jpg`: completed static scene for reduced motion or unavailable
+  WebGL; `hearth-thumb.jpg` is its 240 × 150 menu thumbnail.
+- `hearth-natural.jpg` and `hearth.jpg`: earlier generation references. The
+  live renderer no longer uses those earlier small-fire/unlit plates.
 
-The live shader moves only small regions of the photographed flames. Both ends
-of a displaced lookup must stay above the measured log silhouette. The logs,
-bark, stonework and furniture retain their original source coordinates. Existing
-flame pixels and reflected room light vary gently in brightness; no synthetic
-flame, glowing rectangular log or artificial crack layer is added.
+The live shader animates different photographed flame tongues with upward
+turbulence and independent height changes. A six-point wood silhouette protects
+the smaller logs and the central upright piece, and both ends of a displaced
+lookup must stay above that silhouette. Wood, masonry and furniture retain
+their source coordinates.
 
-Four small existing floor-shadow regions use a low-frequency difference mask,
-limited to 3.5 source pixels of motion and ±1.6% modulation. This is an artistic
-photographic light effect, not three-dimensional combustion, wood-fracture or
-ray-traced shadow simulation.
+The former barely visible 2-pixel flame displacement and ±1.6% floor-shadow
+patch have been replaced with visible flame motion and stronger irregular
+reflected light. Nearby stone, timber and floor brighten and dim with the fire;
+the dark outdoor window is excluded. Existing soft floor shadows shift by up
+to 18 source pixels using a bounded difference mask (±16%), including a hearth
+floor region that remains visible on phones. This is photographic animation,
+not a combustion, wood-fracture or ray-traced shadow simulation.
 
 ### Final fire generation prompt
 
-The original unlit `hearth.jpg` was supplied as the editing reference:
+The previous `hearth-natural.jpg` was the edit target. The built-in image
+generation tool received this prompt:
 
-> Use case: precise-object-edit. Edit the supplied wooden cabin photograph. Keep the room, camera framing, stone fireplace surround, chair, table, plants and wall exactly in place. Replace ONLY the wood inside the central dark fireplace with a small natural burning wood fire photographed in real life. Three irregular split hardwood logs resting in a loose natural cross arrangement on ash; dark rough bark, exposed wood end grain, small naturally charred cracks, a modest red-orange bed of embers underneath. A handful of thin translucent yellow-orange flames curl between and just above the logs, realistic very detailed fire photography, crisp varied edges, black gaps between flames. It is a QUIET ordinary domestic hearth fire, NOT a roaring blaze, bonfire, fireball or wall of flame. The tallest flame should extend at most about ONE THIRD of the opening's height above the log bed; leave the upper half of the firebox clearly dark and empty. Preserve realistic wood texture; no uniformly glowing rectangular logs, no wire grids or artificial crack patterns. Very subtle warm light from this small fire reaches the fireplace stones and nearby floor; retain the existing gentle ambient room lighting and fixed geometry. Photorealistic camera capture, high photographic detail, natural exposure preserves flame detail and dark charred wood. No people, no text, no added objects. Original landscape aspect ratio, maximum available detail. The result is the COMPLETE finished still photograph of a real-looking small fire in this cozy room, to be gently animated afterward.
+> Use case: precise-object-edit. Edit target: the supplied photorealistic wooden cabin fireplace photograph. CHANGE THE WOOD AND FIRE INSIDE THE FIREPLACE ONLY, keep the entire room, walls, stone surround, chair, table, rug, baskets, camera framing and composition exactly in place. The two massive logs and very small flames are wrong. Replace them with FOUR OR FIVE SMALLER slender split pieces of firewood in a low, loose natural arrangement on the ash. Each piece is much thinner than the current logs, roughly one third of their diameter, with irregular bark, charred ends and realistic end grain. The whole low wood pile should occupy about 55% of the firebox width, and only the bottom 12–15% of the firebox height; avoid a huge log diagonally blocking the fire. Make a HEALTHY, MEDIUM domestic hearth fire burning among these smaller pieces: many natural translucent orange-yellow flame tongues, a few pale hot cores, separated by dark gaps, curling in several directions, detailed irregular slender edges. Flames should be about TWICE the current height and more substantial than the current tiny fire, filling the central lower HALF TO TWO THIRDS of the opening while still leaving a clear dark gap to the top of the firebox. Relative to the complete landscape image, flame tips can reach approximately y=44–47% and their base approximately y=66%; source fireplace opening starts around y=35% and ends y=71%. Do not fill the entire fireplace with a solid wall of flame. The fire should look like a normal lively wood fire photographed with a fast shutter, not a giant bonfire or blast. Natural red embers visible between slender logs and warm light on the adjacent stone, wood floor and furniture. Photographic texture, believable real flame shape and fine detail, natural exposure, no cartoon, no synthetic crack grid, no uniformly glowing logs, no duplicated patterns. Preserve fixed room geometry and all objects outside the firebox. 16:9 landscape at the same framing as the input, maximum available detail.
 
 ## Orbital observatory
 
@@ -46,15 +49,21 @@ The original unlit `hearth.jpg` was supplied as the editing reference:
 The room is sampled as an undistorted photograph. A mask follows the measured
 inner window; a source-brightness holdout preserves the foreground handrail and
 window seals. The complete globe and its atmosphere fit both the aperture and
-the visible viewport. No procedural consoles, wall panels or floor grids remain.
+the visible viewport. The physical consoles, wall panels and floor remain
+photographic. Only the measured screen glass and existing small readout panels
+receive changing telemetry, scrolling waveforms and status graphics; their
+projective coordinates remain attached to the source image through cropping.
 
 Earth, atmosphere, stars and simulated cyclones remain live shader effects.
-Earth rotation uses wall-clock time and a sidereal day of 86,164.0905 seconds.
+Earth rotation is now deliberately accelerated to 240 times the mean sidereal
+rate: one turn in approximately 359 seconds. A separate 210-second sunlight
+cycle visibly moves the day/night boundary while keeping part of Earth lit.
+Both phases use the wall clock and remain continuous across scene switches.
 The surface, cloud and city-light images use historical NASA composites;
 their sources and processing are in [earth-attribution.md](earth-attribution.md).
 Cyclones are fictional evolving effects, not current weather observations.
-This is an artistic observatory at geosynchronous altitude with an inertial
-viewing orientation, not a literal ground-locked geostationary camera.
+This is an accelerated artistic observatory at geosynchronous altitude, not a
+real-time orbit, current solar-illumination model or ground-locked camera.
 
 Both fallback views are rendered at 2026-11-15 12:00:02 UTC. The generated
 compositing plates have empty windows; users see a completed Earth view in the
@@ -110,3 +119,16 @@ The unit suite covers scene selection and persistence, WebGL lifecycle and
 fallback routing, source-plate selection, resource cleanup, clock continuity,
 cyclone bounds, portrait selection and fitting the full globe within the
 photographic window after cropping.
+
+Normal-speed motion sequences were inspected separately from still images:
+six seconds for the fire and twelve seconds for the observatory. The fireplace
+check includes the dim orange outer silhouette as well as the bright core, and
+the room-light check excludes the fire itself. The observatory check separates
+Earth movement, changing illumination and instrument content. These sequences
+use production shaders and uniform updates without additional playback speedup.
+
+The Chromium/WebGL2 CI regression also requires perceptible pixel changes in
+those individual regions at desktop and phone viewport sizes. Frozen flame and
+screen controls must be rejected even if other regions are moving; a separate
+frozen-sun comparison detects a static day/night boundary. See
+[the WebGL test guide](../../tests/README-webgl.md) for the runner and its scope.

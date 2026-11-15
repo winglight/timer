@@ -16,7 +16,7 @@ https://timer.broyustudio.com/
 - Browser-local persistence with migration from legacy breath_settings and breath_history data
 - Optional Cloudflare R2 synchronization for settings and practice history
 - Eleven ambience scenes: sunset lake, ocean at dusk, sea of clouds, forest cabin, misty forest, waterfall, starry night, cherry blossoms, desert dusk, a cabin fireplace, and an orbital Earth observatory
-- Eleven three.js scenes with environmental motion: water and reflections, cloud banks, rain, woodland wildlife, bending blossom branches, flowing falls, stars, canyon wind, fire and coherent room lighting, and a real-time rotating Earth with simulated ocean cyclones
+- Eleven three.js scenes with environmental motion: water and reflections, cloud banks, rain, woodland wildlife, bending blossom branches, flowing falls, stars, canyon wind, fire and responsive room lighting, and a visibly rotating Earth with changing daylight, live instruments and simulated ocean cyclones
 - All backgrounds run before and during practice and can be switched off independently
 - Seven real field recordings for waves, rain, birds, forest ambience, a brook, campfire, and breeze; no synthesized noise
 - Independent scene and sound pickers, volume adjustment, saved preferences, and automatic restoration of enabled audio with a first-interaction fallback when the browser blocks autoplay
@@ -45,9 +45,9 @@ The app uses vanilla HTML, CSS, and JavaScript.
 - scenes/woodland.js — woodland wildlife, light mist and wind-bent photographic blossoms
 - scenes/waterfall.js — masked photographic water flow, refraction and pool ripples
 - scenes/landscape.js — moving photographic stars and canyon clouds, ground wind and heat shimmer
-- scenes/hearth.js — turbulent fire, glowing wood fissures, and coordinated room light and furniture shadows
-- scenes/orbital.js — panoramic station interior, shaded globe, atmosphere, stars and simulated ocean cyclones
-- scenes/orbital-model.js — wall-clock sidereal rotation, reproducible ocean weather and responsive globe layout
+- scenes/hearth.js — photographic flame motion, reflected firelight and shifting soft-shadow boundaries
+- scenes/orbital.js — photographic station interior, live instruments, shaded globe, atmosphere, stars and simulated ocean cyclones
+- scenes/orbital-model.js — accelerated wall-clock rotation, changing solar illumination, reproducible ocean weather and responsive globe layout
 - vendor/ — locally served three.js 0.187.0 and its MIT license
 - assets/scenes/ — same-origin scene photographs and source credits
 - share.js — practice snapshot generation and sharing
@@ -86,11 +86,11 @@ Tests cover scene routing, asynchronous load races, paused clocks, fallback and 
 
 ## Cabin fireplace and orbital Earth
 
-**Cabin fireplace** keeps the photographic timber, furniture and masonry stationary. The fire has changing silhouettes and rising sparks; the fuel bed has glowing red embers and irregular fissures. One continuous firelight source drives the flame, reflected light on walls and floor, and soft furniture shadows. A rendered still supplies a lit fireplace when reduced motion is enabled or WebGL is unavailable. `data-scene-texture` points the live shader to the separate unlit source photograph, so a frozen flame is never embedded in its moving fire.
+**Cabin fireplace** uses a photographic source with smaller split logs and a lively, natural wood fire. Different flame tongues bend, rise and change height while the wood, furniture and masonry retain their original shapes. Irregular firelight visibly changes the nearby stone, timber walls and floor, with shifting soft-shadow boundaries. The live shader samples the original photograph through `data-scene-texture`; a separate completed still supplies the fallback when reduced motion is enabled or WebGL is unavailable.
 
-**Orbital Earth** puts the complete globe inside a panoramic space-station window, surrounded by stars and subtle instrument lighting. The globe stays circular and entirely in view on portrait screens. Its axial rotation is computed from wall-clock time at one revolution per mean sidereal day (86,164.0905 seconds, about 23 h 56 m 4 s); switching scenes or returning from a background tab does not reset the phase. This is an artistic inertial presentation at geosynchronous altitude, **not a literal Earth-fixed geostationary window view or an orbital simulator**: a real geostationary observer stays over the same longitude. See [NASA's satellite-orbit explanation](https://science.nasa.gov/earth/earth-observatory/catalog-of-earth-satellite-orbits/) and [sidereal-day explanation](https://science.gsfc.nasa.gov/attic/cosmicopia.gsfc.nasa.gov/qa_earth.html).
+**Orbital Earth** puts the complete globe inside a bright white photographic space-station interior. Earth now rotates at **240 times the mean sidereal rate: one revolution in about 359 seconds**, making its movement visible during ordinary viewing. Solar illumination follows a separate 210-second cycle, so the day/night boundary also moves across the globe. Screen-aligned instruments show changing telemetry, scrolling plots and status indicators. Wall-clock timing keeps rotation and illumination continuous across scene switches and background suspension; portrait screens retain the entire globe and surrounding cabin. This is an artistic accelerated observatory, not a real-time orbital or astronomical simulation.
 
-The ocean cyclones are seeded visual simulations with changing positions, sizes and lifetimes, with opposite circulation in the two hemispheres. Their evolution is compressed into minutes for ambient viewing; they do not represent current weather. Only the Earth's axial rotation follows the real-time rate. Landscape and portrait rendered stills preserve the whole globe when animation is disabled. Scene selection and ambient sound remain independent; the existing campfire recording can accompany the fireplace.
+The ocean cyclones are seeded visual simulations with changing positions, sizes and lifetimes, with opposite circulation in the two hemispheres. Their evolution is compressed into minutes for ambient viewing; they do not represent current weather. Landscape and portrait rendered stills preserve the whole globe when animation is disabled. Scene selection and ambient sound remain independent; the existing campfire recording can accompany the fireplace.
 
 New assets are hosted with the application. [Asset provenance](assets/scenes/new-scenes.md) includes the generated cabin's prompt and the Earth imagery sources.
 
