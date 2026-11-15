@@ -101,3 +101,55 @@ export const WATERFALL_FRAGMENT_SHADER = /* glsl */`
     gl_FragColor = vec4(original + overlay, alpha);
     #include <colorspace_fragment>
   }
+`;
+
+function photoCover(width, height, sourceWidth, sourceHeight) {
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const x = width / (sourceWidth * scale), y = height / (sourceHeight * scale);
+  return [x, y, (1 - x) / 2, (1 - y) / 2];
+}
+
+export async function createWaterfallScene({ width, height, photoUrl, photoTexture }) {
+  const ownsPhoto = !photoTexture;
+  const photo = photoTexture || await new THREE.TextureLoader().loadAsync(photoUrl);
+  photo.colorSpace = THREE.SRGBColorSpace;
+  photo.minFilter = THREE.LinearMipmapLinearFilter;
+  photo.magFilter = THREE.LinearFilter;
+  photo.generateMipmaps = true;
+  const sourceWidth = photo.image?.naturalWidth || photo.image?.width;
+  const sourceHeight = photo.image?.naturalHeight || photo.image?.height;
+  if (!(sourceWidth > 0 && sourceHeight > 0)) {
+    if (ownsPhoto) photo.dispose();
+    throw new Error('Waterfall photograph has no dimensions');
+  }
+  const uniforms = {
+    uTime: { value: 0 }, uPhoto: { value: photo },
+    uCover: { value: new THREE.Vector4(...photoCover(width, height, sourceWidth, sourceHeight)) }
+  };
+  const material = new THREE.ShaderMaterial({
+    name: 'photographic-waterfall-flow', uniforms,
+    vertexShader: WATERFALL_VERTEX_SHADER, fragmentShader: WATERFALL_FRAGMENT_SHADER,
+    transparent: true, depthTest: false, depthWrite: false, toneMapped: false
+  });
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  const scene = new THREE.Scene();
+  scene.name = 'Water descending over the photographed falls into a rippling pool';
+  scene.add(mesh);
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
+  camera.position.z = 2;
+  let disposed = false;
+  return {
+    scene, camera,
+    update(time) { if (!disposed) uniforms.uTime.value = time; },
+    resize(w, h) { if (!disposed) uniforms.uCover.value.set(...photoCover(w, h, sourceWidth, sourceHeight)); },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      geometry.dispose(); material.dispose();
+      if (ownsPhoto) photo.dispose();
+      scene.clear();
+    }
+  };
+}
